@@ -1,0 +1,33 @@
+{
+  "Platform": {
+    "macOS": "15.6",
+    "Build": "24G84",
+    "Brave": "150.1.92.141"
+  },
+  "Observations": [
+    {
+      "mode": "suite",
+      "output": "=== RUN   TestBrowserAbortAndCorruption\n--- PASS: TestBrowserAbortAndCorruption (0.02s)\n=== RUN   TestBrowserLifecycle\n    browser_js_test.go:114: opt-in browser navigation qualification\n--- SKIP: TestBrowserLifecycle (0.00s)\n=== RUN   TestDurableLogAndWriterOwnership\n--- PASS: TestDurableLogAndWriterOwnership (0.09s)\n=== RUN   TestCancellationAndConcurrentAppend\n--- PASS: TestCancellationAndConcurrentAppend (0.01s)\n=== RUN   TestRecordFrameIntegrity\n--- PASS: TestRecordFrameIntegrity (0.00s)\nPASS\n\nExit: 0",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+      "time": "2026-09-14T12:22:53.110Z"
+    },
+    {
+      "mode": "hold",
+      "output": "=== RUN   TestBrowserLifecycle\n    browser_js_test.go:158: holding writer; recovered 1, durably appended record 1\n",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+      "time": "2026-09-14T12:21:53.332Z"
+    },
+    {
+      "mode": "probe",
+      "output": "=== RUN   TestBrowserLifecycle\n    browser_js_test.go:131: other tab excluded\n--- PASS: TestBrowserLifecycle (0.01s)\nPASS\n\nExit: 0",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+      "time": "2026-09-14T12:21:42.359Z"
+    },
+    {
+      "mode": "cleanup",
+      "output": "=== RUN   TestBrowserLifecycle\n    browser_js_test.go:182: refresh retained both acknowledgements; navigation released writer; temporary store removed\n--- PASS: TestBrowserLifecycle (0.01s)\nPASS\n\nExit: 0",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+      "time": "2026-09-14T12:22:04.579Z"
+    }
+  ]
+}

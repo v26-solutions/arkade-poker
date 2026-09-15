@@ -1,0 +1,129 @@
+x-evm-solver-env: &evm-solver-env
+  SWAP_NETWORK: regtest
+  ARK_SERVER_URL: http://arkd:7070
+  EMULATOR_URL: http://emulator:7073
+  ARK_ESPLORA_URL: http://mempool_web/api
+  LN_BACKEND: fake
+  LN_SEND_ENABLED: 'false'
+  LN_RECEIVE_ENABLED: 'false'
+  ONCHAIN_SEND_ENABLED: 'false'
+  ONCHAIN_RECEIVE_ENABLED: 'false'
+  HOST: 0.0.0.0
+  PORT: '8787'
+  ADMIN_HOST: 0.0.0.0
+  ADMIN_PORT: '8788'
+  EVM_TOKENS: WETH:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:18
+  EVM_RPC_URL: http://anvil:8545
+  EVM_HTLC_ADDRESS: '0x00000000000000000000000000000000deadbeef'
+  EVM_CHAIN_ID: '31337'
+  EVM_MIN_CONFIRMATIONS: '1'
+  EVM_MIN_AGE_SECONDS: '1'
+  EVM_FASTEST_SECONDS_PER_BLOCK: '1'
+  EVM_SLOWEST_SECONDS_PER_BLOCK: '1'
+  EVM_ORDER_MARGIN_SECONDS: '7500'
+  EVM_GAS_LIMIT: '500000'
+  EVM_MAX_FEE_PER_GAS_CEILING: '100000000000'
+  EVM_FEE_HEADROOM_SECONDS: '30'
+  EVM_QUOTE_VALIDITY_SECONDS: '300'
+  EVM_WETH_PRICE_FEED: http://evm-pricefeed/btc-weth
+  EVM_WETH_PRICE_PATH: /btc/weth
+  MAX_SWAP_SATS: '1000000'
+  MAX_EXPOSED_SATS: '3000000'
+
+x-evm-solver: &evm-solver
+  image: ${INTENT_SOLVER_EVM_IMAGE:-ghcr.io/arkade-os/intent-solver@sha256:2a77b1974c6e45cefbbc7ac4737f500c9438b51c09fd471ea9c135e6a095957e}
+  profiles: ['evm-e2e']
+  restart: unless-stopped
+  command: ['serve']
+  depends_on:
+    anvil:
+      condition: service_healthy
+    evm-pricefeed:
+      condition: service_started
+  healthcheck:
+    test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+    interval: 5s
+    timeout: 5s
+    retries: 24
+
+services:
+  anvil:
+    image: ${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry@sha256:7026b071fb16606a14426acc0a0e2cd57f80b96abd7e7d371fef8dafe1712cdf}
+    container_name: ${REGTEST_CONTAINER_PREFIX:-}anvil
+    profiles: ['evm-e2e']
+    restart: unless-stopped
+    entrypoint: ['anvil']
+    command: ['--host', '0.0.0.0', '--chain-id', '31337', '--block-time', '1', '--silent']
+    ports:
+      - '127.0.0.1:${EVM_RPC_PORT:-28545}:8545'
+    healthcheck:
+      test: ['CMD', 'cast', 'chain-id', '--rpc-url', 'http://127.0.0.1:8545']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  evm-pricefeed:
+    image: ${EVM_PRICEFEED_IMAGE:-nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10}
+    container_name: ${REGTEST_CONTAINER_PREFIX:-}evm-pricefeed
+    profiles: ['evm-e2e']
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${EVM_PRICEFEED_PORT:-28088}:80'
+    volumes:
+      - ./pricefeed:/usr/share/nginx/html:ro
+      - ./pricefeed.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  evm-init:
+    image: ${FOUNDRY_IMAGE:-ghcr.io/foundry-rs/foundry@sha256:7026b071fb16606a14426acc0a0e2cd57f80b96abd7e7d371fef8dafe1712cdf}
+    container_name: ${REGTEST_CONTAINER_PREFIX:-}evm-init
+    profiles: ['evm-e2e']
+    depends_on:
+      anvil:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '/evm/init.sh']
+    environment:
+      EVM_SWAP_CODE_HASH: ${EVM_SWAP_CODE_HASH:-0xad0e83b3da99b6313c179f8b9cc9b629c567e89997c01ecd0d60f66c7dd841a0}
+      EVM_TOKEN_CODE_HASH: ${EVM_TOKEN_CODE_HASH:-0xd0a06b12ac47863b5c7be4185c2deaad1c61557033f56c7d4ea74429cbb25e23}
+      EVM_SEND_PRIVATE_KEY: ${EVM_SEND_PRIVATE_KEY:-ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
+      EVM_SEND_ADDRESS: ${EVM_SEND_ADDRESS:-0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266}
+      EVM_CLIENT_PRIVATE_KEY: ${EVM_CLIENT_PRIVATE_KEY:-5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a}
+      EVM_CLIENT_ADDRESS: ${EVM_CLIENT_ADDRESS:-0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc}
+      EVM_LIQUIDITY_WEI: ${EVM_LIQUIDITY_WEI:-100000000000000000000}
+      EVM_CLIENT_LIQUIDITY_WEI: ${EVM_CLIENT_LIQUIDITY_WEI:-100000000000000000000}
+    volumes:
+      - ./evm:/evm:ro
+      - ./evm:/fixtures:ro
+
+  intent-solver-evm-send:
+    <<: *evm-solver
+    container_name: ${REGTEST_CONTAINER_PREFIX:-}intent-solver-evm-send
+    environment:
+      <<: *evm-solver-env
+      ARK_MNEMONIC: ${INTENT_SOLVER_EVM_SEND_MNEMONIC:-planet travel grab found idle ripple acoustic hero normal mixed rich lamp}
+      EVM_PRIVATE_KEY: ${EVM_SEND_PRIVATE_KEY:-ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
+      EVM_SEND_WETH_ENABLED: 'true'
+      EVM_RECEIVE_WETH_ENABLED: 'false'
+    ports:
+      - '127.0.0.1:${EVM_SEND_SOLVER_PORT:-28787}:8787'
+      - '127.0.0.1:${EVM_SEND_SOLVER_ADMIN_PORT:-28789}:8788'
+    volumes:
+      - intent_solver_evm_send_datadir:/data
+
+  intent-solver-evm-receive:
+    <<: *evm-solver
+    container_name: ${REGTEST_CONTAINER_PREFIX:-}intent-solver-evm-receive
+    environment:
+      <<: *evm-solver-env
+      ARK_MNEMONIC: ${INTENT_SOLVER_EVM_RECEIVE_MNEMONIC:-test test test test test test test test test test test junk}
+      EVM_PRIVATE_KEY: ${EVM_RECEIVE_PRIVATE_KEY:-59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d}
+      EVM_SEND_WETH_ENABLED: 'false'
+      EVM_RECEIVE_WETH_ENABLED: 'true'
+    ports:
+      - '127.0.0.1:${EVM_RECEIVE_SOLVER_PORT:-28788}:8787'
+      - '127.0.0.1:${EVM_RECEIVE_SOLVER_ADMIN_PORT:-28790}:8788'
+    volumes:
+      - intent_solver_evm_receive_datadir:/data
+
+volumes:
+  intent_solver_evm_send_datadir:
+  intent_solver_evm_receive_datadir:

@@ -1,0 +1,12 @@
+{
+  "name": "solver-init",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "One-shot bootstrapper: funds solverd with BTC + a minted asset and registers trading pairs. Mirrors the solver repo's `make init-solverd`.",
+  "bin": { "solver-init": "./index.mjs" },
+  "dependencies": {
+    "@arkade-os/sdk": "^0.4.41",
+    "eventsource": "^4.1.0"
+  }
+}

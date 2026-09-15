@@ -1,0 +1,161 @@
+{
+  "date": "2026-09-14",
+  "scope": "Headless native Go: gRPC player 1 and HTTP/SSE player 2; real regtest services and relay",
+  "verified": [
+    "Fresh random wallet keys and 100000 external regtest sats per player",
+    "Ordinary hand with raise/call and every street; either-player all-in through showdown",
+    "Matching accepted terminal transactions and settlements",
+    "Both durable logs replay to their original terminal outcomes; imported raw/hex keys absent",
+    "All six exact payout VTXOs spent through actual Arkd Submit/Finalize; source spends and successor VTXOs verified in indexer"
+  ],
+  "service_fee_settings_changed": false,
+  "external_faucet_setup": {
+    "initial_failure": "Existing faucet VTXOs expired; send refused before gameplay",
+    "note_cli_failure": "Redeem-notes omitted existing 1% intent fee",
+    "renewal_cli_failure": "Expired VTXO recovery batch failed with missing forfeit transactions",
+    "resolution": "Temporary upstream batch API helper redeemed a 1000000-test-satoshi note, paying 10000 in existing intent fees; poker clients used only offchain VTXOs",
+    "commitment_txid": "54b7fd715be4d2aae861a4298de5f59f545b4a6930962d3f3b8385cd1ea1c878"
+  },
+  "not_qualified": [
+    "Actual mixed native/Brave UI funded hand",
+    "WASM/browser signature delegation on funded spends",
+    "Live interrupted-submit/retry/restart and opponent catch-up scenarios"
+  ],
+  "runs": [
+    {
+      "Scenario": "ordinary",
+      "Started": "2026-09-14T21:52:39.583743Z",
+      "ElapsedSeconds": 5.062804,
+      "Passed": true,
+      "ArkdVersion": "v0.9.16",
+      "EmulatorVersion": "v0.0.7",
+      "Players": [
+        {
+          "Adapter": "native gRPC",
+          "PublicKey": "9403b15cf6d738deffa85a1d78d0c9757e3e1e10ddeb39f7777408d1b19aba50",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndakk5s7zr6xahvz36cugrlsmahd489mrra3xtzdv77xmqs40y3eecfmr65lv",
+          "FundedSatoshis": 100000,
+          "Records": 59,
+          "Actions": [
+            "raise to 1000",
+            "check",
+            "check",
+            "check",
+            "showdown reveal"
+          ],
+          "Payout": "1214c5e7dec7ca3de27478e4d0385613a7f6954f3e6b22da72e875d2d1757586:0",
+          "PayoutSatoshis": 10000,
+          "SweepTxID": "51c8579cf73f0cf9c250075761499b4d91db6489d9c3a320a2913000ad462445"
+        },
+        {
+          "Adapter": "HTTP/SSE on native Go (not WASM)",
+          "PublicKey": "d5e6037d746ef2c05c424093c7555126bea286b8c1fd8c264bfcf3fdad26d05a",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndahc8xn6gyzvrzaxefqqspv2k6y35cs7ejryt7yfk509jeatkc7y3fuukpdm",
+          "FundedSatoshis": 100000,
+          "Records": 65,
+          "Actions": [
+            "check",
+            "call",
+            "check",
+            "check",
+            "check",
+            "showdown reveal"
+          ],
+          "Payout": "1214c5e7dec7ca3de27478e4d0385613a7f6954f3e6b22da72e875d2d1757586:1",
+          "PayoutSatoshis": 32000,
+          "SweepTxID": "a8c93b9ea03ded4f11779cc5d83c8f23a801e4be4bd8ac91fe59167410d78e15"
+        }
+      ],
+      "TerminalTxID": "1214c5e7dec7ca3de27478e4d0385613a7f6954f3e6b22da72e875d2d1757586",
+      "Settlement": {
+        "Kind": 3,
+        "Winner": 2
+      }
+    },
+    {
+      "Scenario": "player1_all_in",
+      "Started": "2026-09-14T21:53:14.762844Z",
+      "ElapsedSeconds": 3.123633,
+      "Passed": true,
+      "ArkdVersion": "v0.9.16",
+      "EmulatorVersion": "v0.0.7",
+      "Players": [
+        {
+          "Adapter": "native gRPC",
+          "PublicKey": "46fc2b2eb16319474bc429d59dd92f4f4c0a12054d04fbeaa86d0f9cdeb59c45",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndakzvpue8zt6em2q22zh605j6s4a2lvrwdhsg29gpt379kqqmk69wjqhtc5v",
+          "FundedSatoshis": 100000,
+          "Records": 28,
+          "Actions": [
+            "raise to 50000",
+            "showdown reveal"
+          ],
+          "Payout": "63f5c9a3c4ef324b9699d0ab5889cd371a528776e79a66eaa255936f37420128:0",
+          "PayoutSatoshis": 10000,
+          "SweepTxID": "05e4b923d7ab2dbd366a6cd09e6f095221ca09d233e07cd62701bd1fd495b820"
+        },
+        {
+          "Adapter": "HTTP/SSE on native Go (not WASM)",
+          "PublicKey": "811fec589a48e527b9d9105ae0d1019d83cab00cfc15011e7edc3e7fad1dd684",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndah0t8r4swtjw0jq40m6eu8c4sqyae0scxaquggq09jfd79z25fyk4sjz8p0",
+          "FundedSatoshis": 100000,
+          "Records": 31,
+          "Actions": [
+            "check",
+            "call"
+          ],
+          "Payout": "63f5c9a3c4ef324b9699d0ab5889cd371a528776e79a66eaa255936f37420128:1",
+          "PayoutSatoshis": 130000,
+          "SweepTxID": "efcae684b891e2442e432775ad79e3e27ba2a8ffa64febb114a83ba8c1986e5a"
+        }
+      ],
+      "TerminalTxID": "63f5c9a3c4ef324b9699d0ab5889cd371a528776e79a66eaa255936f37420128",
+      "Settlement": {
+        "Kind": 3,
+        "Winner": 2
+      }
+    },
+    {
+      "Scenario": "player2_all_in",
+      "Started": "2026-09-14T21:53:17.886846Z",
+      "ElapsedSeconds": 3.359902,
+      "Passed": true,
+      "ArkdVersion": "v0.9.16",
+      "EmulatorVersion": "v0.0.7",
+      "Players": [
+        {
+          "Adapter": "native gRPC",
+          "PublicKey": "e89ffd2d857beff62e6912a9029284a2d983c8d9a4b893e5f9267dc9582a3bb5",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndakrmhq6gf70ftffu5rese3a5a47y2w594ejj276flq6n6r6v3zx996v0sdh",
+          "FundedSatoshis": 100000,
+          "Records": 24,
+          "Actions": [
+            "call"
+          ],
+          "Payout": "5fb6b913f74fa457da2444ed37189664e493018a659173af773f7392641f8374:0",
+          "PayoutSatoshis": 10000,
+          "SweepTxID": "3f72ecf5e8d7a141242e2b2dd8f5fdaa7c2e9fa0de0a27752f9ab7f19f4e0836"
+        },
+        {
+          "Adapter": "HTTP/SSE on native Go (not WASM)",
+          "PublicKey": "9469eff3ded26f14e10941c317366761d6e838d60a9c509a1dcd18d770fc244a",
+          "Address": "tark1qr340xg400jtxat9hdd0ungyu6s05zjtdf85uj9smyzxshf98ndakfec06atzulrtgcfvpx6mcr99jfelvh0wxfvtfcrex0gltwct4mmulf5p2",
+          "FundedSatoshis": 100000,
+          "Records": 30,
+          "Actions": [
+            "raise to 50000",
+            "showdown reveal"
+          ],
+          "Payout": "5fb6b913f74fa457da2444ed37189664e493018a659173af773f7392641f8374:1",
+          "PayoutSatoshis": 130000,
+          "SweepTxID": "5fc9a87824f8e93b4bbf24f759d31378b07816ee4bee3e73342f45e55298004d"
+        }
+      ],
+      "TerminalTxID": "5fb6b913f74fa457da2444ed37189664e493018a659173af773f7392641f8374",
+      "Settlement": {
+        "Kind": 3,
+        "Winner": 2
+      }
+    }
+  ]
+}

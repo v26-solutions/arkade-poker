@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8"><title>Go transport qualification</title><h1>Go transport qualification</h1><p id="status">Running</p><pre id="result"></pre><script src="wasm_exec.js"></script><script>
+(async()=>{
+const result=document.getElementById('result'),decoder=new TextDecoder();
+let code,reporting=Promise.resolve();
+function report(){
+  const body=JSON.stringify({exit:code??null,output:result.textContent,userAgent:navigator.userAgent,time:new Date().toISOString()});
+  reporting=reporting.then(()=>fetch('/qualification-result',{method:'POST',headers:{'Content-Type':'application/json'},body}));
+  return reporting;
+}
+fs.writeSync=(fd,b)=>{result.textContent+=decoder.decode(b);report();return b.length;};
+const run=new URLSearchParams(location.search).get('run')||'^TestBrowserTransport$';
+const go=new Go();go.argv=['transport.test','-test.v','-test.run='+run,'-test.parallel=4','-test.timeout=2m'];
+go.exit=n=>{code=n;};
+try{
+  const {instance}=await WebAssembly.instantiateStreaming(fetch('transport.test.wasm'),go.importObject);
+  await go.run(instance);document.getElementById('status').textContent='Exit: '+code;
+}catch(e){result.textContent+='\nERROR '+e;code=-1;}
+await report();
+})();
+</script>

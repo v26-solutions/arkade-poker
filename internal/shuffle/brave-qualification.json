@@ -1,0 +1,210 @@
+{
+  "Operations": [
+    {
+      "Name": "0 initial+proof",
+      "Milliseconds": 624.8
+    },
+    {
+      "Name": "0 verify initial",
+      "Milliseconds": 196.900096
+    },
+    {
+      "Name": "0 reshuffle+proof",
+      "Milliseconds": 585.899776
+    },
+    {
+      "Name": "0 verify reshuffle",
+      "Milliseconds": 225.800192
+    },
+    {
+      "Name": "1 initial+proof",
+      "Milliseconds": 600.300032
+    },
+    {
+      "Name": "1 verify initial",
+      "Milliseconds": 216.299776
+    },
+    {
+      "Name": "1 reshuffle+proof",
+      "Milliseconds": 592
+    },
+    {
+      "Name": "1 verify reshuffle",
+      "Milliseconds": 218.400256
+    },
+    {
+      "Name": "2 initial+proof",
+      "Milliseconds": 597.099776
+    },
+    {
+      "Name": "2 verify initial",
+      "Milliseconds": 200.8
+    },
+    {
+      "Name": "2 reshuffle+proof",
+      "Milliseconds": 614.800128
+    },
+    {
+      "Name": "2 verify reshuffle",
+      "Milliseconds": 222.799872
+    },
+    {
+      "Name": "3 initial+proof",
+      "Milliseconds": 584.499968
+    },
+    {
+      "Name": "3 verify initial",
+      "Milliseconds": 211.099904
+    },
+    {
+      "Name": "3 reshuffle+proof",
+      "Milliseconds": 597.100288
+    },
+    {
+      "Name": "3 verify reshuffle",
+      "Milliseconds": 202.699776
+    },
+    {
+      "Name": "4 initial+proof",
+      "Milliseconds": 603.399936
+    },
+    {
+      "Name": "4 verify initial",
+      "Milliseconds": 208.199936
+    },
+    {
+      "Name": "4 reshuffle+proof",
+      "Milliseconds": 608.300032
+    },
+    {
+      "Name": "4 verify reshuffle",
+      "Milliseconds": 212.300032
+    },
+    {
+      "Name": "5 initial+proof",
+      "Milliseconds": 607.500032
+    },
+    {
+      "Name": "5 verify initial",
+      "Milliseconds": 208.100096
+    },
+    {
+      "Name": "5 reshuffle+proof",
+      "Milliseconds": 592.399872
+    },
+    {
+      "Name": "5 verify reshuffle",
+      "Milliseconds": 207.699968
+    },
+    {
+      "Name": "6 initial+proof",
+      "Milliseconds": 576.300032
+    },
+    {
+      "Name": "6 verify initial",
+      "Milliseconds": 200.800256
+    },
+    {
+      "Name": "6 reshuffle+proof",
+      "Milliseconds": 609.69984
+    },
+    {
+      "Name": "6 verify reshuffle",
+      "Milliseconds": 218.4
+    },
+    {
+      "Name": "7 initial+proof",
+      "Milliseconds": 602.4
+    },
+    {
+      "Name": "7 verify initial",
+      "Milliseconds": 202.899968
+    },
+    {
+      "Name": "7 reshuffle+proof",
+      "Milliseconds": 571.2
+    },
+    {
+      "Name": "7 verify reshuffle",
+      "Milliseconds": 209.799936
+    },
+    {
+      "Name": "8 initial+proof",
+      "Milliseconds": 600.600064
+    },
+    {
+      "Name": "8 verify initial",
+      "Milliseconds": 195.899904
+    },
+    {
+      "Name": "8 reshuffle+proof",
+      "Milliseconds": 603.90016
+    },
+    {
+      "Name": "8 verify reshuffle",
+      "Milliseconds": 218.4
+    },
+    {
+      "Name": "9 initial+proof",
+      "Milliseconds": 577.6
+    },
+    {
+      "Name": "9 verify initial",
+      "Milliseconds": 203.599872
+    },
+    {
+      "Name": "9 reshuffle+proof",
+      "Milliseconds": 595.300096
+    },
+    {
+      "Name": "9 verify reshuffle",
+      "Milliseconds": 213.6
+    },
+    {
+      "Name": "10 initial+proof",
+      "Milliseconds": 613.299968
+    },
+    {
+      "Name": "10 verify initial",
+      "Milliseconds": 201.799936
+    },
+    {
+      "Name": "10 reshuffle+proof",
+      "Milliseconds": 599.600128
+    },
+    {
+      "Name": "10 verify reshuffle",
+      "Milliseconds": 214.599936
+    },
+    {
+      "Name": "11 initial+proof",
+      "Milliseconds": 595.90016
+    },
+    {
+      "Name": "11 verify initial",
+      "Milliseconds": 218.299904
+    },
+    {
+      "Name": "11 reshuffle+proof",
+      "Milliseconds": 596.09984
+    },
+    {
+      "Name": "11 verify reshuffle",
+      "Milliseconds": 220.60032
+    },
+    {
+      "Name": "52 reveals with verification",
+      "Milliseconds": 103.599616
+    },
+    {
+      "Name": "two Merkle hand proofs",
+      "Milliseconds": 1852.100096
+    }
+  ],
+  "SpinnerFrames": 259,
+  "DistinctFrames": 10,
+  "Error": "",
+  "BrowserAnimationFrames": 2550,
+  "MaxAnimationGapMs": 100,
+  "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+}

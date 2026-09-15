@@ -1,0 +1,9 @@
+<button id="start" style="position:fixed;top:8px;left:40%;z-index:9" onclick="begin()">Start shuffle qualification</button>
+<pre id="result" style="position:fixed;top:40px;left:12px;right:12px;background:#000;color:#75ff2d;z-index:8;white-space:pre-wrap"></pre>
+<script>
+let active=false,frames=0,last=0,maxGap=0;
+function heartbeat(t){if(active){frames++;if(last)maxGap=Math.max(maxGap,t-last);last=t;}requestAnimationFrame(heartbeat);}
+requestAnimationFrame(heartbeat);
+function begin(){if(!window.startShuffleQualification)return;active=true;frames=0;last=0;maxGap=0;document.getElementById('start').disabled=true;document.getElementById('result').textContent='';window.startShuffleQualification();}
+window.finishShuffleQualification=text=>{active=false;const r=JSON.parse(text);r.BrowserAnimationFrames=frames;r.MaxAnimationGapMs=maxGap;r.UserAgent=navigator.userAgent;window.shuffleQualification=r;document.getElementById('result').textContent=JSON.stringify(r,null,2);document.getElementById('result').style.maxHeight='35vh';document.getElementById('result').style.overflow='auto';fetch('/qualification-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});};
+</script>

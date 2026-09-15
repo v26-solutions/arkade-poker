@@ -1,0 +1,43 @@
+//go:build js && wasm
+
+// Added to a temporary source copy of atotto/clipboard v0.1.4 for WASM.
+package clipboard
+
+import (
+	"errors"
+	"syscall/js"
+)
+
+type clipboardResult struct { text string; err error }
+
+func awaitClipboard(promise js.Value) (string, error) {
+	done := make(chan clipboardResult, 1)
+	ok := js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+		text := ""
+		if len(args) > 0 && args[0].Type() == js.TypeString { text = args[0].String() }
+		done <- clipboardResult{text: text}
+		return nil
+	})
+	fail := js.FuncOf(func(js.Value, []js.Value) interface{} {
+		done <- clipboardResult{err: errors.New("browser clipboard permission denied")}
+		return nil
+	})
+	defer ok.Release()
+	defer fail.Release()
+	promise.Call("then", ok, fail)
+	result := <-done
+	return result.text, result.err
+}
+
+func readAll() (string, error) {
+	clipboard := js.Global().Get("navigator").Get("clipboard")
+	if clipboard.IsUndefined() { return "", errors.New("browser clipboard unavailable") }
+	return awaitClipboard(clipboard.Call("readText"))
+}
+
+func writeAll(text string) error {
+	clipboard := js.Global().Get("navigator").Get("clipboard")
+	if clipboard.IsUndefined() { return errors.New("browser clipboard unavailable") }
+	_, err := awaitClipboard(clipboard.Call("writeText", text))
+	return err
+}

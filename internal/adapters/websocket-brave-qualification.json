@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "output": "=== RUN   TestBrowserTransport\n=== RUN   TestBrowserTransport/websocket\n=== PAUSE TestBrowserTransport/websocket\n=== CONT  TestBrowserTransport/websocket\n    qualification_js_test.go:286: text, UTF-8, input/output limits, dial/read/write cancellation, repeated Close and three fresh sessions before delayed peer closure passed\n--- PASS: TestBrowserTransport (0.00s)\n    --- PASS: TestBrowserTransport/websocket (0.77s)\nPASS\n",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "time": "2026-09-15T10:56:43.886Z"
+}

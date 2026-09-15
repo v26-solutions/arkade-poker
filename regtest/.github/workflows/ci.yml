@@ -1,0 +1,239 @@
+name: ci
+
+# Self-test: boot the whole regtest stack on a clean Linux runner and assert the
+# key services come up, then tear it down. Proves the environment works
+# cross-platform (the orchestrator is also developed on Windows/macOS).
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start regtest environment
+        run: node regtest.mjs start
+
+      - name: Verify services
+        run: |
+          set -euo pipefail
+
+          echo "== arkd =="
+          curl -sf http://localhost:7070/v1/info | jq -e '.signerPubkey != null'
+
+          echo "== mempool Esplora API (regtest) =="
+          test "$(curl -sf http://localhost:3000/api/blocks/tip/height)" -ge 0
+
+          echo "== Delegator wallet (initialized + ready) =="
+          curl -sf http://localhost:7011/api/v1/wallet/status \
+            | jq -e '.initialized == true and .synced == true and .unlocked == true'
+
+          echo "== Lightning channel (lnd-peer -> lnd) =="
+          # `docker exec` resolves the container name, which the `boltz-lnd`
+          # network alias does not cover — so this also gates the rename.
+          chans=$(docker exec lnd-peer lncli --network=regtest listchannels)
+          echo "$chans" | jq -r '.channels[] | "chan \(.chan_id) active=\(.active) local=\(.local_balance) remote=\(.remote_balance)"'
+          echo "$chans" | jq -e '[.channels[] | select(.active)] | length > 0'
+
+          echo "== Emulator =="
+          curl -sf http://localhost:7073/v1/info | jq -e '.signerPubkey != null'
+
+          echo "== Solver =="
+          # solverd's HTTP root may return a non-2xx; any HTTP code (not 000) means it's listening.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7091/)" != "000"
+
+          echo "== Arkade explorer =="
+          curl -sf http://localhost:7080/ -o /dev/null
+
+          echo "== Bucket sync server =="
+          curl -sf http://localhost:7100/health | jq -e '.status == "ok"'
+          # Issuing a challenge writes to the Postgres-backed challenge store, so
+          # this proves the DB wiring end to end and not just that the port is open.
+          curl -sf -X POST http://localhost:7100/v1/auth/schnorr/challenge | jq -e '.nonce != null'
+          # bucket-sync-initdb created the database and the server migrated into it.
+          test "$(docker exec postgres psql -U postgres -d bucketsync -tAc 'SELECT count(*) FROM schema_migrations')" -gt 0
+          # CORS is on by default here so browser clients work without a proxy.
+          curl -sf -o /dev/null -D - -H 'Origin: http://localhost:3003' http://localhost:7100/health \
+            | grep -qi '^access-control-allow-origin:'
+
+          echo "== strfry (Nostr relay) =="
+          # NIP-11 over plain HTTP proves docker/strfry.conf was picked up (name)
+          # and that NIP-42 auth is off (42 absent from the advertised NIPs).
+          curl -sf -H 'Accept: application/nostr+json' http://localhost:7777/ \
+            | jq -e '.name == "arkade-regtest" and (.supported_nips | index(42) | not)'
+          # A real websocket round trip — REQ in, EOSE back — so this covers the
+          # query path and not just an open port. Node 20 needs the flag for a
+          # WebSocket client; it's global from 22 on, where the flag is a no-op.
+          node --experimental-websocket -e '
+            const ws = new WebSocket("ws://localhost:7777");
+            const timer = setTimeout(() => { console.error("no EOSE from strfry"); process.exit(1); }, 15000);
+            ws.onopen = () => ws.send(JSON.stringify(["REQ", "ci-probe", { limit: 1 }]));
+            ws.onmessage = (m) => {
+              if (JSON.parse(m.data)[0] !== "EOSE") return;
+              clearTimeout(timer);
+              ws.close();
+              process.exit(0);
+            };
+          '
+
+          echo "== ark client CLI (initialized + funded) =="
+          docker exec arkd ark balance | jq -e '.offchain_balance.total > 0'
+
+      - name: Exercise the intent solver (real RFQ quote over HTTP)
+        run: |
+          set -euo pipefail
+          # `start` already gates on /healthz, which only proves a port is bound.
+          # A quote is the round trip that proves the LND link, the Arkade wallet
+          # and corridor admission are all live at once.
+          curl -sf http://localhost:8787/healthz | jq -e '.ok == true and .network == "regtest"'
+
+          # Arkade float, which `start` sends it. Asserted rather than trusted:
+          # the receive corridors fund lockups out of this, and at 0 the solver
+          # quotes and then cannot fill — a failure that hides behind a healthy
+          # /healthz and a working send-direction quote.
+          docker exec intent-solver node --enable-source-maps --experimental-eventsource \
+            packages/solver-app/dist/cli.js balances > balances.txt 2>&1 || true
+          grep -E 'arkade (address|balance)' balances.txt || { cat balances.txt; exit 1; }
+          grep -qE '"available":[1-9]' balances.txt
+
+          # 25000 is interior to regtest's 1000..1000000 corridor limits, and well
+          # under the 500000 the lightning profile pushes to `lnd` for outbound.
+          invoice=$(docker exec lnd-peer lncli --network=regtest addinvoice --amt 25000 | jq -r '.payment_request')
+          refund=$(docker exec arkd ark receive | jq -r '.offchain_address')
+          rfq_id=$(openssl rand -hex 32)
+          # A real curve point — the quote builds a covenant from it, so random
+          # bytes would fault rather than refuse. Same key the signer steps pin.
+          pubkey=e35799157be4b37565bb5afe4d04e6a0fa0a4b6a4f4e48b0d904685d253cdbdb
+
+          body=$(jq -nc --arg inv "$invoice" --arg refund "$refund" --arg pk "$pubkey" --arg id "$rfq_id" '{
+            v: 1, type: "rfq_request", rfq_id: $id,
+            pair: "arkade:BTC->lightning:BTC", amount_side: "to",
+            profile: { invoice: $inv, refund_address: $refund, client_refund_pubkey: $pk }
+          }')
+
+          out=$(curl -s -w $'\n%{http_code}' -X POST http://localhost:8787/v1/swap \
+            -H 'Content-Type: application/json' -d "$body")
+          code=$(printf '%s' "$out" | tail -n1)
+          quote=$(printf '%s' "$out" | sed '$d')
+          echo "POST /v1/swap -> $code: $quote"
+          # 201 is a quote; 400/422 are the refusal shapes, and both fail here.
+          test "$code" = "201"
+          echo "$quote" | jq -e '.type == "rfq_quote" and .rfq_id == "'"$rfq_id"'"'
+          # `tostring`, because the two amounts are JSON numbers here while
+          # docs/rfq-protocol.md § 4.2 calls them canonical decimal strings.
+          # Tolerating both keeps this green whichever way that is reconciled.
+          echo "$quote" | jq -e '(.to_amount | tostring) == "25000"'
+          # The fee lives in the spread, so the client always funds at least the payout.
+          echo "$quote" | jq -e '(.from_amount | tonumber) >= (.to_amount | tonumber)'
+          echo "$quote" | jq -e '.solver_pubkey | test("^[0-9a-f]{64}$")'
+          echo "$quote" | jq -e '.valid_until > now'
+
+          # A funding address the client can actually pay — proof a covenant was built.
+          lockup=$(echo "$quote" | jq -r '.profile.lockup_address')
+          echo "$lockup" | grep -q '^tark1'
+
+          # Retrievable by correlation id, and it is the SAME negotiation.
+          status=$(curl -sf "http://localhost:8787/v1/rfq/$rfq_id")
+          echo "GET /v1/rfq/$rfq_id -> $status"
+          echo "$status" | jq -e '.type == "rfq_status" and .rfq_id == "'"$rfq_id"'"'
+          echo "$status" | jq -e '.state == "quoted"'
+          echo "$status" | jq -e '.profile.lockup_address == "'"$lockup"'"'
+
+      - name: Exercise a settlement (deep flow — round + on-chain commitment)
+        run: |
+          set -euo pipefail
+          # Drives a full arkd round: the client settles its preconfirmed VTXOs
+          # into a confirmed batch, which broadcasts the commitment tx (P2A anchor
+          # + CPFP via submitpackage) and builds the VTXO tree. This exercises the
+          # esplora + submitpackage paths the lightweight balance check never hits
+          # (and which the downstream e2e suites depend on).
+          before=$(docker exec arkd ark balance | jq -r '.offchain_balance.total')
+          echo "offchain balance before settle: $before"
+          timeout 180 docker exec arkd ark settle --password secret
+          node regtest.mjs mine 1
+          sleep 5
+          after=$(docker exec arkd ark balance | jq -r '.offchain_balance.total')
+          echo "offchain balance after settle: $after"
+          test "$after" -gt 0
+
+      - name: Exercise the mine helper
+        run: |
+          set -euo pipefail
+          before=$(curl -sf http://localhost:3000/api/blocks/tip/height)
+          node regtest.mjs mine 3
+          # mempool polls bitcoind on an interval, so allow a few seconds for it
+          # to index the new blocks before asserting the tip advanced.
+          for i in $(seq 1 15); do
+            after=$(curl -sf http://localhost:3000/api/blocks/tip/height)
+            if [ "$after" -ge "$((before + 3))" ]; then echo "tip $before -> $after"; exit 0; fi
+            sleep 2
+          done
+          echo "tip did not advance ($before -> ${after:-?})"; exit 1
+
+      - name: Exercise the reorg helper
+        run: |
+          set -euo pipefail
+          before=$(docker exec bitcoin bitcoin-cli -regtest -rpcuser=admin1 -rpcpassword=123 getblockcount)
+          node regtest.mjs reorg 2
+          after=$(docker exec bitcoin bitcoin-cli -regtest -rpcuser=admin1 -rpcpassword=123 getblockcount)
+          # reorg 2 invalidates 2 blocks and mines 3, so the tip advances by 1.
+          test "$after" -gt "$before"
+          echo "reorg 2: height $before -> $after"
+
+      - name: Exercise signer rotation (operator key rotation + deprecation)
+        run: |
+          set -euo pipefail
+          # Rotate twice. The first rotation moves off arkd-wallet's self-generated
+          # key to a CLI-managed one (which can't be deprecated — its private key was
+          # never ours); the second deprecates THAT key with a future cutoff. Asserts
+          # the active signer changes each time and a deprecated signer is advertised,
+          # proving the rc images honor ARKD_WALLET_DEPRECATED_SIGNER_KEYS.
+          before=$(curl -sf http://localhost:7070/v1/info | jq -r '.signerPubkey')
+          node regtest.mjs rotate-signer
+          mid=$(curl -sf http://localhost:7070/v1/info | jq -r '.signerPubkey')
+          test "$before" != "$mid"
+          node regtest.mjs rotate-signer --cutoff +86400
+          after=$(curl -sf http://localhost:7070/v1/info | jq -r '.signerPubkey')
+          test "$mid" != "$after"
+          curl -sf http://localhost:7070/v1/info | jq -e '.deprecatedSigners | length >= 1'
+          node regtest.mjs signer-info
+          echo "signer rotation: $before -> $mid -> $after"
+
+      - name: Exercise set-signers (explicit signer set)
+        run: |
+          set -euo pipefail
+          # Apply an EXPLICIT set (the keys ts-sdk's e2e uses): active afcd3fa1…,
+          # deprecated b7e15162… with a future cutoff. Asserts the active is that
+          # key's pubkey and exactly one deprecated signer is advertised.
+          A=afcd3fa10f82a05fddc9574fdb13b3991b568e89cc39a72ba4401df8abef35f0
+          B=b7e151628aed2a6abf7158809cf4f3c762e7160f38b4da56a784d9045190cfef
+          node regtest.mjs set-signers --active "$A" --deprecated "$B:$(( $(date +%s) + 86400 ))"
+          info=$(curl -sf http://localhost:7070/v1/info)
+          echo "$info" | jq -e '.deprecatedSigners | length == 1'
+          echo "$info" | jq -e '.signerPubkey | test("e35799157be4b37565bb5afe4d04e6a0fa0a4b6a4f4e48b0d904685d253cdbdb")'
+          node regtest.mjs signer-info
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f docker/compose.base.yml -f docker/compose.ark.yml ps || true
+          for c in bitcoin fulcrum mempool_api mempool_web nbxplorer arkd-wallet arkd arkade-wallet arkade-explorer lnd lnd-peer fulmine-delegator emulator solver intent-solver bucket-sync-initdb bucket-sync strfry; do
+            echo "===== logs: $c ====="
+            docker logs --tail 80 "$c" 2>&1 || true
+          done
+
+      - name: Cleanup
+        if: always()
+        run: node regtest.mjs clean

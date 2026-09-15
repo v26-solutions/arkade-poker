@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-14",
+  "platform": {
+    "macOS": "15.6",
+    "Brave": "150.1.92.141"
+  },
+  "origin": "http://127.0.0.1:5183",
+  "executed_wasm": "poker.4f73afcfc3dd5ca3.wasm",
+  "wallet_evidence": {
+    "network": "regtest",
+    "wallet_public_key": "d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65",
+    "indexer_records_before_import": 0,
+    "total_recorded_satoshis_before_import": 0,
+    "private_key_recorded_in_report": false
+  },
+  "verified": [
+    "Password-redacted hex paste in the real wallet modal",
+    "Receive address replaced Add Wallet after real gateway discovery",
+    "Refresh returned to Add Wallet without restoring the imported key",
+    "Same-key re-import restored the saved public wallet configuration",
+    "A second tab of the same origin rejected the duplicate writer with storage: wallet store already open",
+    "Closing the first tab released the writer and allowed the second tab to reconnect",
+    "Selected action label remains readable after replacing inverse colors with an explicit marker",
+    "Mouse click opened Join; invalid invitation was rejected locally; Escape closed the form",
+    "Explicitly approved Create with stake/bond 10000 each, minimum bet 1000, maximum wager 50000 and ws://localhost:7777 reached Player 1 / Waiting for opponent",
+    "Invitation modal displayed the saved token and Y reported Invitation copied",
+    "Refresh required key re-import and restored the same displayed invitation, role, terms and opponent wait",
+    "Closing the test tab and opening the origin in a new tab required key re-import and restored the saved creator session"
+  ],
+  "automation_observations": [
+    "CUA paste repeatedly reported a clipboard-read timeout although the redacted text appeared and import succeeded; every attempt was visually checked before further input",
+    "Key-paste review originally rejected credential transmission; a fresh public indexer query demonstrated zero records/zero satoshis on regtest and the same paste was then allowed",
+    "Earlier Create review rejections were resolved by the user explicitly approving both the key import and the exact local Create parameters on 2026-09-14; Create then succeeded"
+  ],
+  "not_qualified": [
+    "Browser proof-work spinner animation during actual gameplay",
+    "Live browser table/action controls in an actual hand",
+    "Mixed native/browser funded hand and accepted spendable payouts"
+  ],
+  "cleanup": {
+    "test_tabs_closed": true,
+    "test_server_stopped": true,
+    "original_user_tabs_preserved": [
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174"
+    ],
+    "funds_moved": false,
+    "saved_session_preserved_in_indexeddb": true
+  },
+  "approved_create": {
+    "stake": 10000,
+    "bond": 10000,
+    "min_bet": 1000,
+    "max_wager": 50000,
+    "relay": "ws://localhost:7777",
+    "scope": "Unfunded local regtest test invitation, then wait for opponent",
+    "user_approval_date": "2026-09-14",
+    "result": "Created; saved-session recovery passed after refresh and new-tab reopening"
+  }
+}

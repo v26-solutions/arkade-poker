@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "output": "=== RUN   TestBrowserTransport\n=== RUN   TestBrowserTransport/live_services\n=== PAUSE TestBrowserTransport/live_services\n=== RUN   TestBrowserTransport/live_subscription\n=== PAUSE TestBrowserTransport/live_subscription\n=== RUN   TestBrowserTransport/fragmented_subscription\n=== PAUSE TestBrowserTransport/fragmented_subscription\n=== RUN   TestBrowserTransport/websocket\n=== PAUSE TestBrowserTransport/websocket\n=== CONT  TestBrowserTransport/websocket\n=== CONT  TestBrowserTransport/fragmented_subscription\n=== CONT  TestBrowserTransport/live_subscription\n=== CONT  TestBrowserTransport/live_services\n    qualification_js_test.go:55: Arkd v0.9.16\n    qualification_js_test.go:62: Emulator v0.0.7\n    qualification_js_test.go:105: browser emulator POST/CORS: main + checkpoint signatures verified on synthetic non-finalizing fixture\n=== NAME  TestBrowserTransport/websocket\n    qualification_js_test.go:238: text, UTF-8, input/output limits, dial/read/write cancellation and repeated Close passed\n=== NAME  TestBrowserTransport/fragmented_subscription\n    qualification_js_test.go:163: healthy 32.09s, 32 heartbeat frames, 1134 bytes; Close completed\n=== NAME  TestBrowserTransport/live_subscription\n    qualification_js_test.go:163: healthy 65.01s, 1 heartbeat frames, 113 bytes; Close completed\n--- PASS: TestBrowserTransport (0.00s)\n    --- PASS: TestBrowserTransport/live_services (0.04s)\n    --- PASS: TestBrowserTransport/websocket (0.28s)\n    --- PASS: TestBrowserTransport/fragmented_subscription (32.09s)\n    --- PASS: TestBrowserTransport/live_subscription (65.01s)\nPASS\n",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+  "time": "2026-09-14T16:04:06.850Z",
+  "macOS": "15.6 (24G84)",
+  "Brave": "150.1.92.141",
+  "FixtureActiveConnectionsAfterRun": 0,
+  "Cleanup": "Both qualification tabs closed; loopback fixture stopped; existing previews untouched."
+}

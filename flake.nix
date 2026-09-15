@@ -16,8 +16,29 @@
       ];
 
       perSystem =
-        { pkgs, ... }:
+        { config, pkgs, ... }:
         {
+          packages.default = config.packages.poker;
+          packages.poker = pkgs.buildGoModule {
+            pname = "arkade-poker";
+            version = "0-unstable";
+            src = pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions [
+                ./go.mod
+                ./go.sum
+                ./cmd
+                ./internal
+              ];
+            };
+            vendorHash = "sha256-XLrCHyDRDHwrM41oKP+V4eIBASwDuXfB0FLFRQt5qx4=";
+            subPackages = [ "cmd/poker" ];
+            env.CGO_ENABLED = "0";
+            tags = [ "purego" ];
+            buildFlags = [ "-buildvcs=false" ];
+            meta.mainProgram = "poker";
+          };
+
           devShells.default = pkgs.mkShell {
             DOCKER_CLI_PLUGIN_EXTRA_DIRS = "${pkgs.docker-compose}/libexec/docker/cli-plugins";
             packages = with pkgs; [

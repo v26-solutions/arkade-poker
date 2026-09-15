@@ -7,6 +7,8 @@ servers and release packaging use Go and Make. Dependencies require Go 1.26.6
 or newer; the pinned Nix shell provides Go 1.26.7.
 
 ```sh
+nix build               # native TUI at result/bin/poker (also nix build .#poker)
+nix run                 # build and launch the native TUI
 nix develop             # optional: pinned Go, Make, Node and Docker tools
 make all                # build/poker and build/web/
 make serve              # build and serve at http://127.0.0.1:5173
@@ -28,6 +30,36 @@ Go's JavaScript WASM test runtime. The regtest CLI uses Node's standard library
 and needs no `npm install`. The optional solver bootstrap installs its own SDK
 dependencies inside its Docker image (`regtest/docker/solver-init`), independently
 of the application build.
+
+The default Nix package builds only the native TUI with pure Go dependencies.
+Its source includes `go.mod`, `go.sum`, `cmd/` and `internal/`; local environment
+files and build output are excluded. When Go dependencies change, update
+`vendorHash` in `flake.nix`: temporarily set it to `pkgs.lib.fakeHash`, run
+`nix build`, then replace it with the hash reported by Nix and rebuild.
+
+## GitHub Pages
+
+`.github/workflows/pages.yml` builds the native Nix package and runs
+`make check test-wasm` in the pinned Nix development shell on pull requests,
+pushes to `master`, and manual workflow runs. Go uses the Nix toolchain with
+`GOTOOLCHAIN=local`, and CI does not update `flake.lock`.
+
+After checks pass on `master`, CI uploads `build/web/` and deploys it to GitHub
+Pages. Pull requests and manual runs on other branches only build and test.
+Enable **Settings > Pages > Build and deployment > Source > GitHub Actions**
+in the GitHub repository, and allow `master` in the `github-pages` environment
+deployment rules. The workflow uses GitHub's built-in token; no separate deploy
+token or `gh-pages` branch is needed.
+
+The Pages build uses the public Mutinynet defaults below. To change them, pass
+explicit `WEB_FLAGS` to the workflow's Make command. Pages serves static files;
+Arkd, emulator, delegator and relay services remain external. Verify service
+access from the deployed origin, including API CORS, and smoke-test terminal
+startup and WASM loading at the repository's Pages subpath.
+
+The web app is built with `nix develop`, while `nix build` remains the native TUI.
+The pinned tools do not remove the WASM reproducibility limitation documented
+under Dependencies and browser compatibility.
 
 ## Application defaults and overrides
 

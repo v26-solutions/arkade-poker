@@ -23,7 +23,7 @@ type Host struct {
 	DiscoverNetwork func(context.Context) (string, error)
 	ConnectWallet   func(context.Context, *wallet.Key) (wallet.Receive, error)
 	ConnectSession  func(context.Context, *wallet.Key) (*client.Session, error)
-	ClearSavedGame  func(context.Context, [32]byte) error
+	ClearSavedGame  func(context.Context, [32]byte) (*client.Session, error)
 	RelayURL        string
 	DefaultTerms    game.Terms
 	CopyText        func(string) error
@@ -233,10 +233,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case clearedGameMsg:
 		m.clearing = false
-		m.status = "Saved game cleared. Add your wallet again."
+		m.status = "Saved game cleared."
 		if msg.err != nil {
 			m.errorText = "Could not clear saved game: " + msg.err.Error()
-			m.status = "Clear failed. Retry or add your wallet again."
+			m.status = "Clear failed. Retry to continue."
+		} else if msg.session != nil {
+			m.session = msg.session
+			m.receive = msg.session.Receive
+			return m, tea.Batch(m.waitUpdate(), m.waitBalance())
 		} else {
 			m.clearPublic = [32]byte{}
 		}

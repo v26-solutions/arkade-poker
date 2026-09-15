@@ -55,7 +55,7 @@ func (m *memoryLog) open(context.Context, [32]byte) (storage.Log, error) {
 	return m, nil
 }
 
-func TestClearSavedGameClosesSessionAndAllowsReimport(t *testing.T) {
+func TestClearSavedGamePreservesLoadedWallet(t *testing.T) {
 	for _, state := range []string{"active", "failed open", "failed driver"} {
 		t.Run(state, func(t *testing.T) {
 			cfg, g, log, connects := fixture(t)
@@ -89,8 +89,8 @@ func TestClearSavedGameClosesSessionAndAllowsReimport(t *testing.T) {
 					default:
 						t.Fatal("clear ran before session stopped")
 					}
-					if key.PublicKey() != [32]byte{} {
-						t.Fatal("clear retained imported key")
+					if key.PublicKey() != public {
+						t.Fatal("clear destroyed imported key")
 					}
 				}
 				log.mu.Lock()
@@ -118,26 +118,107 @@ func TestClearSavedGameClosesSessionAndAllowsReimport(t *testing.T) {
 				if (state == "failed driver") != (u.Err != nil) {
 					t.Fatal("wrong restore result", u.Err)
 				}
-				if err := c.ClearSavedGame(t.Context(), [32]byte{3}); !errors.Is(err, wallet.ErrKey) || clears != 0 {
+				if _, err := c.ClearSavedGame(t.Context(), [32]byte{3}); !errors.Is(err, wallet.ErrKey) || clears != 0 {
 					t.Fatal("mismatched wallet cleared active session", err)
 				}
 			}
 			before := connects.Load()
-			if err := c.ClearSavedGame(t.Context(), public); err != nil {
+			fresh, err := c.ClearSavedGame(t.Context(), public)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if clears != 1 || connects.Load() != before || len(log.records) != 0 {
-				t.Fatal("clear must remove history without service calls")
+			if state == "failed open" {
+				if fresh != nil || connects.Load() != before || len(log.records) != 0 {
+					t.Fatal("clear without a loaded wallet must only remove history")
+				}
+				fresh, err = c.Open(t.Context(), importKey(t, 20))
+				if err != nil {
+					t.Fatal("import after failed restore and clear", err)
+				}
+			} else if fresh == nil || fresh == s || key.PublicKey() != public || fresh.Receive.Address != s.Receive.Address {
+				t.Fatal("clear did not start a fresh session with the loaded wallet")
 			}
-			s, err = c.Open(t.Context(), importKey(t, 20))
-			if err != nil {
-				t.Fatal("reimport after clear", err)
+			u := await(t, fresh, func(u game.Update) bool { return u.Err != nil || u.Snapshot.Choice != nil })
+			if u.Err != nil || u.Snapshot.Stage != game.StageInit || len(log.records) != 1 || clears != 1 {
+				t.Fatal("clear did not start fresh", u.Err)
 			}
-			u := await(t, s, func(u game.Update) bool { return u.Err != nil || u.Snapshot.Choice != nil })
-			if u.Err != nil || u.Snapshot.Stage != game.StageInit {
-				t.Fatal("reimport did not start fresh", u.Err)
+			if u := awaitBalance(t, fresh.Balances); u.Err != nil {
+				t.Fatal("cleared wallet balance did not resume", u.Err)
+			}
+			c.Close()
+			if key.PublicKey() != [32]byte{} {
+				t.Fatal("closed client retained cleared wallet key")
 			}
 		})
+	}
+}
+
+func TestClearSavedGameRetryRetainsKey(t *testing.T) {
+	for _, failure := range []string{"clear", "reopen"} {
+		for _, retry := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/retry=%t", failure, retry), func(t *testing.T) {
+				cfg, _, log, _ := fixture(t)
+				fail := false
+				open := cfg.Open
+				cfg.Open = func(ctx context.Context, public [32]byte) (storage.Log, error) {
+					if fail && failure == "reopen" {
+						return nil, storage.ErrLocked
+					}
+					return open(ctx, public)
+				}
+				cfg.Clear = func(context.Context, [32]byte) error {
+					if fail && failure == "clear" {
+						return storage.ErrLocked
+					}
+					log.mu.Lock()
+					defer log.mu.Unlock()
+					if log.locked {
+						t.Fatal("clear did not release writer")
+					}
+					log.records = nil
+					return nil
+				}
+				c := New(cfg)
+				defer c.Close()
+				key := importKey(t, 20)
+				public := key.PublicKey()
+				s, err := c.Open(t.Context(), key)
+				if err != nil {
+					t.Fatal(err)
+				}
+				await(t, s, func(u game.Update) bool { return u.Snapshot.Choice != nil })
+				fail = true
+				if _, err := c.ClearSavedGame(t.Context(), public); !errors.Is(err, storage.ErrLocked) {
+					t.Fatal("missing clear/reopen error", err)
+				}
+				if key.PublicKey() != public {
+					t.Fatal("clear failure destroyed key")
+				}
+				if _, err := c.ClearSavedGame(t.Context(), [32]byte{3}); !errors.Is(err, wallet.ErrKey) {
+					t.Fatal("retry accepted another wallet", err)
+				}
+				other := importKey(t, 21)
+				defer other.Destroy()
+				if _, err := c.Open(t.Context(), other); !errors.Is(err, storage.ErrLocked) {
+					t.Fatal("import replaced retained wallet", err)
+				}
+				if retry {
+					fail = false
+					s, err = c.ClearSavedGame(t.Context(), public)
+					if err != nil {
+						t.Fatal(err)
+					}
+					u := await(t, s, func(u game.Update) bool { return u.Err != nil || u.Snapshot.Choice != nil })
+					if u.Err != nil || u.Snapshot.Stage != game.StageInit || key.PublicKey() != public {
+						t.Fatal("retry did not resume loaded wallet", u.Err)
+					}
+				}
+				c.Close()
+				if key.PublicKey() != [32]byte{} {
+					t.Fatal("close retained wallet after clear failure/retry")
+				}
+			})
+		}
 	}
 }
 

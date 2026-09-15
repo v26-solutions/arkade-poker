@@ -136,15 +136,6 @@ func (m *Model) layout() *screen {
 	if h >= 38 {
 		gap = 1
 	}
-	f.put(1, 0, textStyle.Render("ARKADE POKER"))
-	if m.canClearGame() {
-		label := "[X] Clear saved game"
-		f.put(w-len(label)-1, 0, dimStyle.Render(label))
-		f.region("clear", w-len(label)-1, 0, len(label), 1)
-	} else if w >= 100 {
-		label := "HEADS-UP / NO-LIMIT HOLD'EM"
-		f.put(w-len(label)-1, 0, dimStyle.Render(label))
-	}
 	f.put(0, 1, panel("WALLET", w, 3))
 	left := m.walletHeader()
 	if m.receive.Address != "" {
@@ -174,10 +165,12 @@ func (m *Model) layout() *screen {
 	handY := actionY - gap - handH
 	boardY := 4 + gap
 	boardH := handY - gap - boardY
+	const tagline = "HEADS-UP // SATS HOLD'EM"
+	welcome := false
 	if m.snapshot.State != nil {
 		m.tableSections(f, boardY, boardH, handY, handH)
 	} else {
-		body := "   ▄▀█ █▀█ █▄▀ ▄▀█ █▀▄ █▀▀\n   █▀█ █▀▄ █ █ █▀█ █▄▀ ██▄\n\n      █▀█ █▀█ █▄▀ █▀▀ █▀█\n      █▀▀ █▄█ █ █ ██▄ █▀▄\n\nWallet-funded heads-up poker"
+		body := "▄▀█ █▀█ █▄▀ ▄▀█ █▀▄ █▀▀\n█▀█ █▀▄ █ █ █▀█ █▄▀ ██▄\n\n█▀█ █▀█ █▄▀ █▀▀ █▀█\n█▀▀ █▄█ █ █ ██▄ █▀▄"
 		title := "POKER"
 		if m.snapshot.Invitation != nil {
 			title = "SESSION / PLAYER " + fmt.Sprint(m.snapshot.Role)
@@ -186,8 +179,18 @@ func (m *Model) layout() *screen {
 			body = "PREPARING YOUR SESSION\n\n" + clean(m.status)
 		} else if m.snapshot.Outcome != nil {
 			body = "SESSION ABORTED\n\n" + clean(m.snapshot.Outcome.AbortReason)
+		} else if m.modal == noModal {
+			body += "\n\n" + tagline
+			welcome = true
 		}
 		f.section(title, body, boardY, actionY-gap-boardY)
+	}
+	if m.canClearGame() {
+		label := "[X] Clear saved game"
+		f.put(w-len(label)-1, 0, dimStyle.Render(label))
+		f.region("clear", w-len(label)-1, 0, len(label), 1)
+	} else if !welcome {
+		f.put(w-len(tagline)-1, 0, dimStyle.Render(tagline))
 	}
 	legend := "ACTIONS / ARROWS SELECT · ENTER"
 	if allowed(m.snapshot.Choice, game.Bet) {

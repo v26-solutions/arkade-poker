@@ -69,14 +69,18 @@ receive address are copied; only their display is shortened/wrapped. Long valid
 invitations preserve their entire payload and keep review/copy controls visible. The payout dialog shows the accepted payout transaction and local payout amount. A stopped
 driver retains its table and log, with no new-game control.
 
-After a wallet import attempt, the top bar offers `X: Clear saved game`, also
-when restore fails before connecting or after the driver stops. Only the wallet's
+The top bar and menu offer `X: Clear saved game` only for a stopped game or a
+failed restore/clear. Healthy games, including fresh setup, opponent waits and
+completed hands, do not show or accept it. Only the wallet's
 public identity is retained after a failed import. Clear has keyboard/mouse
 confirmation defaulting to Cancel and explains the loss of recovery data and
 that funds in a hand are not refunded. Confirmation stops the owned session and
-clears all local games for that wallet, then returns to wallet entry. Import and
+clears all local games for that wallet, then starts a fresh session with the
+already loaded wallet. The address and balance remain visible while restarting;
+the new session resumes balance updates. Failed imports that never loaded a
+wallet still return to wallet entry. Import and
 duplicate clear requests are disabled until completion; errors keep the clear
-option available for retry. Results from the old session cannot repopulate the
+option available for retry without dropping a loaded wallet. Results from the old session cannot repopulate the
 screen after clear or after another import. There is no automatic deletion.
 
 The header receive address copies on click without a Y shortcut or copy hint.

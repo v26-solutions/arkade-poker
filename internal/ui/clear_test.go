@@ -40,12 +40,12 @@ func TestClearAfterFailedWalletImport(t *testing.T) {
 			m := New(t.Context(), Host{Browser: browser, InitialKey: key,
 				ConnectSession: func(context.Context, *wallet.Key) (*client.Session, error) {
 					return nil, errors.New("game: invalid protocol evidence: initial deposit packet or output")
-				}, ClearSavedGame: func(_ context.Context, got [32]byte) error {
+				}, ClearSavedGame: func(_ context.Context, got [32]byte) (*client.Session, error) {
 					calls++
 					if got != public {
 						t.Fatal("clear targeted another wallet")
 					}
-					return nil
+					return nil, nil
 				}})
 			cmd := m.connect()
 			press(m, 'x', 0)
@@ -99,14 +99,24 @@ func TestClearAfterFailedWalletImport(t *testing.T) {
 
 func TestClearFailureRetryAndStaleMessages(t *testing.T) {
 	m := playing()
-	m.clearPublic = [32]byte{2}
+	m.stopped = true
+	key, err := wallet.ParseKey(fmt.Sprintf("%064x", 20), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer key.Destroy()
+	m.key = key
+	m.clearPublic = key.PublicKey()
+	m.balance, m.balanceKnown = 123456, true
+	receive := m.receive
+	fresh := &client.Session{Receive: receive}
 	calls := 0
-	m.host.ClearSavedGame = func(context.Context, [32]byte) error {
+	m.host.ClearSavedGame = func(context.Context, [32]byte) (*client.Session, error) {
 		calls++
 		if calls == 1 {
-			return storage.ErrLocked
+			return nil, storage.ErrLocked
 		}
-		return nil
+		return fresh, nil
 	}
 	old := m.snapshot
 	press(m, 'x', 0)
@@ -126,8 +136,11 @@ func TestClearFailureRetryAndStaleMessages(t *testing.T) {
 	} {
 		m.Update(msg)
 	}
-	if m.snapshot.State != nil || m.stopped || m.balanceKnown || m.balanceFailed || m.balance != 0 {
+	if m.snapshot.State != nil || m.stopped || !m.balanceKnown || m.balanceFailed || m.balance != 123456 {
 		t.Fatal("stale session result repopulated cleared UI")
+	}
+	if m.key != key || key.PublicKey() != m.clearPublic || m.receive.Address != receive.Address {
+		t.Fatal("clear failure unloaded the wallet")
 	}
 	press(m, 'x', 0)
 	m.Update(tea.WindowSizeMsg{Width: 65, Height: 20})
@@ -138,5 +151,59 @@ func TestClearFailureRetryAndStaleMessages(t *testing.T) {
 	m.Update(press(m, tea.KeyEnter, 0)())
 	if calls != 2 || m.errorText != "" || m.canClearGame() {
 		t.Fatal("retry did not complete clear")
+	}
+	if m.key != key || m.session != fresh || m.receive.Address != receive.Address || m.balance != 123456 {
+		t.Fatal("clear did not preserve the loaded wallet")
+	}
+	freshSnapshot := game.Snapshot{Choice: &game.Choice{Allowed: []game.InputKind{game.StartSession, game.JoinSession}}}
+	m.Update(driverMsg{generation: m.generation, update: game.Update{Snapshot: freshSnapshot}})
+	m.Update(balanceMsg{generation: m.generation, update: client.BalanceUpdate{Sats: 654321}})
+	if len(m.actions()) != 2 || m.balance != 654321 {
+		t.Fatal("new session did not resume actions and balance updates")
+	}
+}
+
+func TestClearGameAvailability(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		setup func(*Model)
+		want  bool
+	}{
+		{"active hand", func(*Model) {}, false},
+		{"waiting for opponent", func(m *Model) { m.snapshot = game.Snapshot{Stage: game.StageAwaitOpponentKeys} }, false},
+		{"fresh wallet", func(m *Model) {
+			m.snapshot = game.Snapshot{Choice: &game.Choice{Allowed: []game.InputKind{game.StartSession, game.JoinSession}}}
+		}, false},
+		{"completed hand", func(m *Model) {
+			m.snapshot.Outcome = &game.Outcome{Kind: game.Won}
+			m.snapshot.Stage = game.StageFinished
+		}, false},
+		{"aborted setup", func(m *Model) {
+			m.snapshot.Outcome = &game.Outcome{Kind: game.Aborted}
+			m.snapshot.Stage = game.StageAborted
+		}, false},
+		{"stopped driver", func(m *Model) { m.stopped = true; m.snapshot = game.Snapshot{} }, true},
+		{"restoring", func(m *Model) { m.snapshot = game.Snapshot{} }, false},
+		{"connecting", func(m *Model) { m.connecting = true }, false},
+		{"clearing", func(m *Model) { m.clearing = true }, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			m := playing()
+			m.width = 120
+			m.clearPublic = [32]byte{2}
+			m.host.ClearSavedGame = func(context.Context, [32]byte) (*client.Session, error) { t.Fatal("unexpected clear"); return nil, nil }
+			test.setup(m)
+			if got := strings.Contains(m.View().Content, "[X] Clear saved game"); got != test.want {
+				t.Fatalf("header clear availability = %t, want %t", got, test.want)
+			}
+			press(m, 'x', 0)
+			if (m.modal == clearGameModal) != test.want {
+				t.Fatal("keyboard disagrees with header availability")
+			}
+			m.modal = menuModal
+			if got := strings.Contains(m.View().Content, "[X] CLEAR SAVED GAME"); got != test.want {
+				t.Fatal("menu disagrees with header availability")
+			}
+		})
 	}
 }

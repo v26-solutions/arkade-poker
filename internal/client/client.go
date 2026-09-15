@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -38,6 +39,18 @@ type Session struct {
 	NewGame       chan struct{}
 	stop          context.CancelFunc
 	done          chan struct{}
+	keyMu         sync.Mutex
+	key           *wallet.Key
+}
+
+// releaseKey transfers ownership without copying the secret. A clear takes it
+// before stopping the session, then waits for all signing work before reuse.
+func (s *Session) releaseKey() *wallet.Key {
+	s.keyMu.Lock()
+	defer s.keyMu.Unlock()
+	key := s.key
+	s.key = nil
+	return key
 }
 
 func (s *Session) Close() {
@@ -47,15 +60,17 @@ func (s *Session) Close() {
 	}
 }
 
-// Done closes after all workers stop, the key is destroyed and storage is closed.
+// Done closes after all workers stop and storage closes. The key is destroyed
+// unless an explicit clear transferred it to the next session.
 func (s *Session) Done() <-chan struct{} { return s.done }
 
 type Client struct {
-	config  Config
-	mu      sync.Mutex
-	session *Session
-	public  [32]byte
-	closed  bool
+	config     Config
+	mu         sync.Mutex
+	session    *Session
+	public     [32]byte
+	pendingKey *wallet.Key // Retained across clear/reopen failures for an explicit retry.
+	closed     bool
 }
 
 func New(config Config) *Client { return &Client{config: config} }
@@ -64,31 +79,50 @@ func (c *Client) Close() {
 	c.mu.Lock()
 	c.closed = true
 	s := c.session
+	key := c.pendingKey
+	c.pendingKey = nil
 	c.mu.Unlock()
 	s.Close()
+	key.Destroy()
 }
 
 // ClearSavedGame stops and joins any owned session before removing its history.
 // It also works after Open fails, when no session could be restored. Clearing
-// never connects to services or submits transactions; another import is required.
-func (c *Client) ClearSavedGame(ctx context.Context, public [32]byte) error {
+// retains an already imported key and opens a fresh session without new ingress.
+// Without a loaded wallet it only clears storage. It never submits transactions.
+func (c *Client) ClearSavedGame(ctx context.Context, public [32]byte) (*Session, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
-		return storage.ErrClosed
+		return nil, storage.ErrClosed
 	}
 	if ctx == nil || c.config.Clear == nil {
-		return storage.ErrUnavailable
+		return nil, storage.ErrUnavailable
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
-	if public == [32]byte{} || (c.session != nil && public != c.public) {
-		return wallet.ErrKey
+	if public == [32]byte{} || ((c.session != nil || c.pendingKey != nil) && public != c.public) {
+		return nil, wallet.ErrKey
+	}
+	if c.session != nil {
+		c.pendingKey = c.session.releaseKey()
 	}
 	c.session.Close()
-	c.session, c.public = nil, [32]byte{}
-	return c.config.Clear(ctx, public)
+	c.session = nil
+	if err := c.config.Clear(ctx, public); err != nil {
+		return nil, err
+	}
+	if c.pendingKey == nil {
+		c.public = [32]byte{}
+		return nil, nil
+	}
+	s, err := c.open(ctx, c.pendingKey)
+	if err != nil {
+		return nil, fmt.Errorf("restart cleared game: %w", err)
+	}
+	c.pendingKey = nil
+	return s, nil
 }
 
 // Open owns the imported key only after success. Failures release all resources
@@ -99,9 +133,14 @@ func (c *Client) Open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 	if c.closed {
 		return nil, storage.ErrClosed
 	}
-	if c.session != nil {
+	if c.session != nil || c.pendingKey != nil {
 		return nil, storage.ErrLocked
 	}
+	return c.open(ctx, key)
+}
+
+// open requires c.mu; ownership transfers only once startup succeeds.
+func (c *Client) open(ctx context.Context, key *wallet.Key) (_ *Session, err error) {
 	if key == nil || key.PublicKey() == [32]byte{} || c.config.Open == nil || c.config.Connect == nil {
 		return nil, wallet.ErrKey
 	}
@@ -149,7 +188,7 @@ func (c *Client) Open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 	updates := make(chan game.Update)
 	balances := make(chan BalanceUpdate, 1)
 	s := &Session{Receive: cfg.Wallet.Receive, Network: cfg.Wallet.Network, Inputs: make(chan game.Input), Updates: updates,
-		Balances: balances, NewGame: make(chan struct{}), stop: stop, done: make(chan struct{})}
+		Balances: balances, NewGame: make(chan struct{}), stop: stop, done: make(chan struct{}), key: key}
 	s.ValidateSetup = func(input game.Input) error {
 		if input.Kind != game.StartSession && input.Kind != game.JoinSession {
 			return game.ErrInput
@@ -179,7 +218,7 @@ func (c *Client) run(ctx context.Context, s *Session, key *wallet.Key, base stor
 	defer close(s.done)
 	defer close(updates)
 	defer close(balances)
-	defer key.Destroy()
+	defer func() { s.releaseKey().Destroy() }()
 	defer base.Close()
 	defer func() {
 		if connections.Transport != nil {

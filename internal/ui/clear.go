@@ -1,19 +1,29 @@
 package ui
 
 import (
+	"arkade-poker/go/internal/client"
 	"arkade-poker/go/internal/game"
-	"arkade-poker/go/internal/wallet"
 	tea "charm.land/bubbletea/v2"
 )
 
-type clearedGameMsg struct{ err error }
+type clearedGameMsg struct {
+	session *client.Session
+	err     error
+}
 
 func (m *Model) canClearGame() bool {
-	return m.host.ClearSavedGame != nil && m.clearPublic != [32]byte{} && !m.connecting && !m.clearing
+	if m.host.ClearSavedGame == nil || m.clearPublic == [32]byte{} || m.connecting || m.clearing {
+		return false
+	}
+	// Clear is recovery for a stopped game or a failed restore/clear, including
+	// failures before a session exists. Healthy games use their normal actions.
+	return m.session == nil || m.stopped
 }
 
 func (m *Model) openClearGame() {
-	m.modal, m.clearConfirm = clearGameModal, false
+	if m.canClearGame() {
+		m.modal, m.clearConfirm = clearGameModal, false
+	}
 }
 
 func (m *Model) clearGame() tea.Cmd {
@@ -21,16 +31,13 @@ func (m *Model) clearGame() tea.Cmd {
 		return nil
 	}
 	ctx, clearSaved, public := m.ctx, m.host.ClearSavedGame, m.clearPublic
-	key, session := m.key, m.session
 	// Ignore pending driver, balance and action results from the session being
 	// closed. The host joins its workers and releases storage before clearing.
 	m.generation++
 	m.clearing = true
 	m.modal = noModal
-	m.key, m.session = nil, nil
-	m.receive = wallet.Receive{}
+	m.session = nil
 	m.snapshot = game.Snapshot{}
-	m.balance, m.balanceKnown, m.balanceFailed = 0, false, false
 	m.busy, m.stopped, m.shuffling = false, false, false
 	m.selected = 0
 	m.copyNotice, m.copyNoticeUntil = "", 0
@@ -39,9 +46,7 @@ func (m *Model) clearGame() tea.Cmd {
 	m.clearForm()
 	m.errorText, m.status = "", "Clearing saved game..."
 	return func() tea.Msg {
-		if session == nil {
-			defer key.Destroy()
-		}
-		return clearedGameMsg{err: clearSaved(ctx, public)}
+		session, err := clearSaved(ctx, public)
+		return clearedGameMsg{session: session, err: err}
 	}
 }

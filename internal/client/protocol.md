@@ -16,9 +16,12 @@ supplied again. The host retains the loaded wallet and writer
 on a driver error; it exposes no automatic retry or new-game reset. Restart is
 the existing bounded recovery attempt. An explicit ClearSavedGame operation
 cancels and joins the session, releases its writer, and clears only the requested
-wallet's local history. It also works after Open fails, without replay or service
-calls. Another import is required afterward, including after a storage-clear
-failure. It does not refund funds or settle a hand. Close cancels and joins the driver before
+wallet's local history. An already imported key transfers to the client before
+shutdown and is reused only after all old workers stop. Clear opens a fresh
+session and returns it to the UI without requiring wallet ingress. A clear or
+reopen failure retains the key for an explicit retry; Close destroys it even if
+no replacement session opened. Clear also works after Open fails, without replay
+or service calls when no wallet was loaded. It does not refund funds or settle a hand. Close cancels and joins the driver before
 closing clients/store and destroying the imported key. No key ingress text is
 ever an argument to storage or a service operation.
 

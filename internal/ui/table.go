@@ -22,7 +22,11 @@ func (m *Model) modalBody() string {
 		if m.clearConfirm {
 			buttons = "Cancel    [ Confirm clear ]"
 		}
-		return fmt.Sprintf("CLEAR SAVED GAME?\n\nRemove all saved games for wallet %x…%x\nfrom this device?\n\nThis deletes recovery data and does not refund funds in a hand.\nYou will need to add the wallet again.\n\n%s\n\n←/→: Select    Enter: Activate    Escape: Cancel", m.clearPublic[:4], m.clearPublic[28:], buttons)
+		walletStatus := ""
+		if m.key != nil {
+			walletStatus = "\nYour wallet will stay loaded."
+		}
+		return fmt.Sprintf("CLEAR SAVED GAME?\n\nRemove all saved games for wallet %x…%x\nfrom this device?\n\nThis deletes recovery data and does not refund funds in a hand.%s\n\n%s\n\n←/→: Select    Enter: Activate    Escape: Cancel", m.clearPublic[:4], m.clearPublic[28:], walletStatus, buttons)
 	case exitModal:
 		buttons := "[ Cancel ]    Confirm exit"
 		if m.exitConfirm {

@@ -5,7 +5,7 @@ package ui
 import (
 	"context"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
 
 	"arkade-poker/go/internal/appconfig"
@@ -14,8 +14,6 @@ import (
 	"arkade-poker/go/internal/wallet"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
-	"github.com/charmbracelet/x/ansi"
 )
 
 type Host struct {
@@ -43,6 +41,9 @@ const (
 	raiseModal
 	joinConfirmModal
 	clearGameModal
+	allInModal
+	payoutModal
+	menuModal
 )
 
 type tickMsg time.Time
@@ -192,7 +193,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 		m.input.SetWidth(max(10, min(54, m.width-12)))
 		for i := range m.fields {
-			m.fields[i].SetWidth(max(10, min(54, m.width-16)))
+			m.fields[i].SetWidth(max(10, min(46, m.width-26)))
 		}
 	case tickMsg:
 		m.frame++
@@ -262,44 +263,42 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.MouseClickMsg:
-		if m.clearing {
+		if msg.Button != tea.MouseLeft || m.clearing {
 			return m, nil
 		}
-		if msg.Button == tea.MouseLeft && m.modal == noModal && m.canClearGame() && m.hit(msg.X, msg.Y, "[X] Clear saved game") {
+		id := m.layout().hit(msg.X, msg.Y)
+		switch id {
+		case "wallet":
+			return m, m.openWallet()
+		case "wallet-copy":
+			return m, m.copyWallet()
+		case "clear":
 			m.openClearGame()
 			return m, nil
-		}
-		if msg.Button == tea.MouseLeft && m.modal == clearGameModal {
-			if m.hit(msg.X, msg.Y, "Cancel") {
-				m.modal = noModal
-			} else if m.hit(msg.X, msg.Y, "Confirm clear") {
+		case "cancel":
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+		case "confirm":
+			if m.modal == exitModal {
+				return m, tea.Quit
+			}
+			if m.modal == clearGameModal {
 				return m, m.clearGame()
 			}
+			return m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+		case "menu-exit":
+			m.previousModal, m.modal, m.exitConfirm = menuModal, exitModal, false
 			return m, nil
 		}
-		if m.width >= 76 && m.height >= 30 && m.modal == noModal && msg.Button == tea.MouseLeft && msg.Y == 1 {
-			if m.receive.Address != "" && m.hit(msg.X, msg.Y, shortAddress(m.receive.Address)) {
-				return m, m.copyWallet()
-			}
-			if m.receive.Address == "" && m.hit(msg.X, msg.Y, "[ Add Wallet ]") {
-				return m, m.openWallet()
-			}
+		if len(id) > 7 && id[:7] == "action:" {
+			cmd, _ := m.gameKey(id[7:])
+			return m, cmd
 		}
-		if msg.Button == tea.MouseLeft && m.width >= 76 && m.height >= 30 {
-			if m.modal == noModal {
-				for _, a := range m.actions() {
-					if m.hit(msg.X, msg.Y, "["+strings.ToUpper(a.key)+"] "+a.label) {
-						cmd, _ := m.gameKey(a.key)
-						return m, cmd
-					}
-				}
-			} else if m.modal == exitModal {
-				if m.hit(msg.X, msg.Y, "Cancel") {
-					m.modal = m.previousModal
-					return m, nil
-				}
-				if m.hit(msg.X, msg.Y, "Confirm exit") {
-					return m, tea.Quit
+		if len(id) > 6 && id[:6] == "field:" {
+			for i := range m.fields {
+				if id == fmt.Sprintf("field:%d", i) {
+					m.fields[m.field].Blur()
+					m.field = i
+					return m, m.fields[i].Focus()
 				}
 			}
 		}
@@ -333,7 +332,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if key == "esc" {
-			if m.modal == exitModal {
+			if m.modal == noModal && m.session != nil {
+				m.modal = menuModal
+			} else if m.modal == exitModal {
 				m.modal = m.previousModal
 			} else {
 				m.modal = noModal
@@ -372,7 +373,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorText = ""
 			return m, m.connect()
 		}
-		if m.modal == noModal && m.key == nil && (key == "a" || key == "enter") {
+		if m.modal == noModal && m.key == nil && m.session == nil && (key == "a" || key == "enter") {
 			return m, m.openWallet()
 		}
 		if cmd, handled := m.gameKey(key); handled {
@@ -390,17 +391,4 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	return m, nil
-}
-
-func (m *Model) hit(x, y int, label string) bool {
-	lines := strings.Split(ansi.Strip(m.View().Content), "\n")
-	if y < 0 || y >= len(lines) {
-		return false
-	}
-	i := strings.Index(lines[y], label)
-	if i < 0 {
-		return false
-	}
-	start := lipgloss.Width(lines[y][:i])
-	return x >= start && x < start+lipgloss.Width(label)
 }

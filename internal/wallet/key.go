@@ -33,12 +33,13 @@ func (*Key) String() string               { return "[wallet key]" }
 func (*Key) GoString() string             { return "[wallet key]" }
 func (*Key) MarshalJSON() ([]byte, error) { return nil, errors.New("wallet keys cannot be serialized") }
 
-// ParseKey uses the same ingress policy for environment and modal input. Decode
-// NIP-19 first, then raw hex, then BIP39 on decoding failures. A valid mnemonic
-// requires the network reported by Arkd; raw keys do not. SetByteSlice's
-// overflow flag is checked BEFORE constructing a key: reducing modulo N would
-// turn invalid input into another person's wallet.
+// ParseKey uses the same ingress policy for environment and modal input. Trim
+// surrounding whitespace, then decode NIP-19, raw hex, or BIP39 on decoding
+// failures. A valid mnemonic requires the network reported by Arkd; raw keys do
+// not. SetByteSlice's overflow flag is checked BEFORE constructing a key:
+// reducing modulo N would turn invalid input into another person's wallet.
 func ParseKey(text, network string) (*Key, error) {
+	text = strings.TrimSpace(text)
 	data, err := decodeNsec(text)
 	if err != nil {
 		data, err = hex.DecodeString(text)
@@ -61,7 +62,6 @@ func ParseKey(text, network string) (*Key, error) {
 
 func parseMnemonic(text, network string) (*Key, error) {
 	// Normalize word separators before both validation and seed derivation.
-	// Never normalize raw keys into accepting surrounding whitespace.
 	phrase := strings.Join(strings.Fields(text), " ")
 	seed, err := bip39.NewSeedWithErrorChecking(phrase, "")
 	if err != nil {

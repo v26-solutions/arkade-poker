@@ -2,7 +2,6 @@ package ui
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -61,8 +60,12 @@ func (m *Model) driverUpdate(msg driverMsg) tea.Cmd {
 			m.busy = false
 			// A raise increment is relative to this position. Close a stale form
 			// before its input can be applied to a different opponent wager.
-			if m.modal == raiseModal {
+			if m.modal == raiseModal || m.modal == allInModal {
 				m.modal = noModal
+				m.clearForm()
+			}
+			if m.modal == exitModal && (m.previousModal == raiseModal || m.previousModal == allInModal) {
+				m.previousModal = noModal
 				m.clearForm()
 			}
 		}
@@ -103,7 +106,11 @@ func (m *Model) actions() []action {
 	}
 	s, c := m.snapshot, m.snapshot.Choice
 	if s.Outcome != nil {
-		return []action{{key: "n", label: "New game"}}
+		a := []action{{key: "n", label: "New game"}}
+		if s.Outcome.Transaction != nil {
+			a = append(a, action{key: "p", label: "Payout details"})
+		}
+		return a
 	}
 	a := []action{}
 	if allowed(c, game.StartSession) {
@@ -123,7 +130,7 @@ func (m *Model) actions() []action {
 			a = append(a, action{"c", "Check", game.Input{Kind: game.Bet, Bet: covenant.BettingAction{Kind: covenant.Check}}})
 		}
 		if c.CanCall {
-			a = append(a, action{"c", fmt.Sprintf("Call %d", c.CallAmount), game.Input{Kind: game.Bet, Bet: covenant.BettingAction{Kind: covenant.Call}}})
+			a = append(a, action{"c", "Call " + formatSats(c.CallAmount), game.Input{Kind: game.Bet, Bet: covenant.BettingAction{Kind: covenant.Call}}})
 		}
 		if c.MinRaiseTo > 0 && c.MaxRaiseTo >= c.MinRaiseTo {
 			a = append(a, action{key: "r", label: "Raise"}, action{"a", "All in", game.Input{Kind: game.Bet, Bet: covenant.BettingAction{Kind: covenant.RaiseTo, Amount: c.MaxRaiseTo}}})
@@ -192,7 +199,7 @@ func (m *Model) openForm(kind modal, values ...string) tea.Cmd {
 		if kind == joinModal {
 			i.CharLimit = 16384
 		} // Above codec limit: overlong paste stays invalid.
-		i.SetWidth(max(10, min(54, m.width-16)))
+		i.SetWidth(max(10, min(46, m.width-26)))
 		i.SetValue(value)
 		m.fields = append(m.fields, i)
 	}
@@ -203,6 +210,35 @@ func (m *Model) openForm(kind modal, values ...string) tea.Cmd {
 }
 
 func (m *Model) gameKey(key string) (tea.Cmd, bool) {
+	if m.modal == menuModal {
+		switch key {
+		case "enter", "r":
+			m.modal = noModal
+		case "x":
+			if m.canClearGame() {
+				m.openClearGame()
+			}
+		case "q":
+			if !m.host.Browser {
+				m.previousModal, m.modal, m.exitConfirm = menuModal, exitModal, false
+			}
+		}
+		return nil, true
+	}
+	if m.modal == payoutModal {
+		return nil, true
+	}
+	if m.modal == allInModal {
+		if key == "enter" {
+			for _, a := range m.actions() {
+				if a.key == "a" {
+					return m.submit(a.input, false), true
+				}
+			}
+			m.errorText = "All in is no longer available."
+		}
+		return nil, true
+	}
 	if m.modal == createModal || m.modal == joinModal || m.modal == raiseModal {
 		if key == "tab" || key == "shift+tab" || key == "up" || key == "down" {
 			step := 1
@@ -269,6 +305,10 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 			continue
 		}
 		m.selected = i
+		if key == "a" {
+			m.modal, m.errorText = allInModal, ""
+			return nil, true
+		}
 		if action.input.Kind != 0 {
 			return m.submit(action.input, false), true
 		}
@@ -283,6 +323,9 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 			return m.openForm(tokenModal), true
 		case "r":
 			return m.openRaise(), true
+		case "p":
+			m.modal = payoutModal
+			return nil, true
 		case "n":
 			return m.submit(game.Input{}, true), true
 		}
@@ -351,10 +394,16 @@ func (m *Model) submitForm() tea.Cmd {
 
 func (m *Model) gameStatus() string {
 	if m.snapshot.Outcome != nil {
-		return "Game complete | Payout details on table"
+		return "Hand complete | P: Payout details"
+	}
+	if m.snapshot.State != nil && m.snapshot.State.Phase.Kind == covenant.ShowdownEvaluation {
+		if m.snapshot.Stage == game.StageEvaluateShowdown {
+			return "Cards revealed | Evaluating hands"
+		}
+		return "Cards revealed | Payout pending"
 	}
 	if m.snapshot.Choice != nil && len(m.snapshot.Choice.Allowed) > 0 {
-		return "Your action | Arrows select | Enter activates"
+		return "Your action | Arrows select | Enter activates | Esc menu"
 	}
 	switch m.snapshot.Stage {
 	case game.StageInit:

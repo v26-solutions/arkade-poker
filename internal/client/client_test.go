@@ -67,7 +67,7 @@ func TestClearSavedGameClosesSessionAndAllowsReimport(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				e.Previous[0] ^= 1 // Correct identity, but invalid journal chain.
+				e.Sequence++ // Preserve the wallet binding; fail journal ordering during replay.
 				log.records[0], err = game.EncodeEvent(e)
 				if err != nil {
 					t.Fatal(err)

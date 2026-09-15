@@ -26,9 +26,9 @@ const loading = document.querySelector<HTMLDivElement>('#loading')!;
 async function start() {
   window.pokerConfig = POKER_BUILD_CONFIG;
   const terminal = new BoobaTerminal('terminal', {
-    fontSize: 15, cursorBlink: true, scrollback: 0,
+    fontSize: 14, fontFamily: '"SFMono-Regular", Menlo, Consolas, monospace', cursorBlink: true, scrollback: 0,
     allowOSC52: true,
-    theme: { background: '#000000', foreground: '#75ff2d', cursor: '#75ff2d' },
+    theme: { background: '#000000', foreground: '#7cff00', cursor: '#7cff00' },
   });
   await terminal.init();
   // Preserve macOS browser shortcuts, including Cmd+C/V and Ctrl+C. Do not

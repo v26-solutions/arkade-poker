@@ -63,6 +63,14 @@ func (h *handHarness) terminalBranches() {
 			if g.outcome.Kind != want || g.outcome.Settlement.Kind != SettlementConcession {
 				h.t.Fatal("concession beneficiary")
 			}
+			before, err := h.games[i].Snapshot()
+			if err != nil {
+				h.t.Fatal(err)
+			}
+			after, err := g.Snapshot()
+			if err != nil || after.State == nil || after.Cards != before.Cards || after.Choice != nil {
+				h.t.Fatal("concession lost the table or exposed unrevealed cards", err)
+			}
 		}
 	}
 }

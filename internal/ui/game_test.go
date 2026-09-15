@@ -54,7 +54,7 @@ func submitted(t *testing.T, m *Model, cmd tea.Cmd) game.Input {
 func TestLegalActionsAndRaiseIncrement(t *testing.T) {
 	m := playing()
 	view := ansi.Strip(m.View().Content)
-	for _, text := range []string{"Call 200", "POT 3000 SATS", "PLAYER 2", "Your wager 400", "Opponent wager 600", "Available wager 1600"} {
+	for _, text := range []string{"CALL 200", "POT 3,000 SATS", "PLAYER 2", "WAGER 400", "IN THIS HAND 1,600 SATS", "REMAINING 1,600"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("missing real table projection %q", text)
 		}
@@ -177,7 +177,7 @@ func TestTableAndFormsFitMinimumGridAndActionsClick(t *testing.T) {
 	m.modal = noModal
 	lines := strings.Split(ansi.Strip(m.View().Content), "\n")
 	for y, line := range lines {
-		if i := strings.Index(line, "[R] Raise"); i >= 0 {
+		if i := strings.Index(line, "[R] RAISE"); i >= 0 {
 			m.Update(tea.MouseClickMsg{X: lipgloss.Width(line[:i]) + 2, Y: y, Button: tea.MouseLeft})
 			if m.modal != raiseModal {
 				t.Fatal("raise button did not click")
@@ -249,7 +249,7 @@ func TestInvitationReviewAndCopyPreserveCompletePayload(t *testing.T) {
 		t.Fatal("invitation review overflowed minimum terminal size")
 	}
 	view := m.View().Content
-	if !strings.Contains(view, "Press Enter to deposit 2,000 sats and join") {
+	if !strings.Contains(view, "DEPOSIT 2,000 SATS PER PLAYER") {
 		t.Fatal("join confirmation did not show the stake plus bond deposit")
 	}
 	press(m, tea.KeyEnd, 0)

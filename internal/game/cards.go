@@ -201,13 +201,20 @@ func (g *Game) knownCards(h *handState) (covenant.DealtCards[KnownCard], error) 
 	if err != nil {
 		return covenant.DealtCards[KnownCard]{}, err
 	}
-	// Match the reference UI projection: own holes and accepted complete board
-	// prefix only. Opponent holes are still used internally for settlement.
+	// Opponent holes become public only once both of their own reveal shares
+	// have been admitted from an accepted spend. Local private openings never
+	// authorize exposing the other player's hand, including after a fold.
 	offset := 0
 	if g.setup.role == covenant.Player1 {
 		offset = 2
 	}
-	cards[offset], cards[offset+1] = KnownCard{}, KnownCard{}
+	opponent := other(g.setup.role)
+	for _, slot := range ownSlots(opponent) {
+		if h.reveals[slot] == nil {
+			cards[offset], cards[offset+1] = KnownCard{}, KnownCard{}
+			break
+		}
+	}
 	if !cards[4].Known || !cards[5].Known || !cards[6].Known {
 		for i := 4; i < 9; i++ {
 			cards[i] = KnownCard{}

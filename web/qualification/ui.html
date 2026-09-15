@@ -1,0 +1,22 @@
+<style>
+  #terminal { top: 52px; }
+  #preview-controls { position: absolute; inset: 8px 8px auto; display: flex; align-items: center; gap: 16px; font: 12px monospace; color: #95b77c; }
+  #preview-controls select { background: #111; color: #7cff00; border: 1px solid #527339; padding: 6px; font: inherit; }
+</style>
+<nav id="preview-controls" aria-label="UI preview">
+  <label for="scene">SCREEN</label>
+  <select id="scene">
+    <option value="0">Welcome</option><option value="1">Create session</option><option value="2">Join session</option>
+    <option value="3">Pre-flop</option><option value="4">Flop</option><option value="5">Turn</option>
+    <option value="6">Raise</option><option value="7">All in</option><option value="8" selected>Showdown · win</option>
+    <option value="9">Showdown · lose</option><option value="10">Split pot</option><option value="11">Payout details</option>
+    <option value="12">Payout pending</option><option value="13">Opponent folded</option><option value="14">Opponent's turn</option>
+    <option value="15">Game menu</option><option value="16">River</option><option value="17">Preparing hand</option>
+  </select>
+  <span>ISOLATED PREVIEW · NO WALLET OR NETWORK · F1 / F2 SWITCH SCREENS</span>
+</nav>
+<script>
+  document.getElementById('scene').addEventListener('change', event => {
+    window.bubbletea_write?.('\x1b[200~preview:' + event.target.value + '\x1b[201~');
+  });
+</script>

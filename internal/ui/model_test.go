@@ -165,19 +165,19 @@ func TestShortAddressCopiesFullValue(t *testing.T) {
 	m.receive.Address = full
 	m.Update(balanceMsg{update: client.BalanceUpdate{Sats: 123456}})
 	view := m.View().Content
-	if strings.Contains(view, full) || strings.Contains(view, "Y: Copy") || !strings.Contains(view, "tark1qr34...4yfn  123,456 sats") {
+	if strings.Contains(view, full) || strings.Contains(view, "Y: Copy") || (!strings.Contains(view, "tark1qr34...4yfn") || !strings.Contains(view, "AVAILABLE BALANCE 123,456 SATS")) {
 		t.Fatal("incorrect shortened address")
 	}
 	if cmd := press(m, 'y', 0); cmd != nil {
 		t.Fatal("unexpected address keyboard shortcut")
 	}
-	header := strings.Split(ansi.Strip(view), "\n")[1]
+	header := strings.Split(ansi.Strip(view), "\n")[2]
 	addressX := lipgloss.Width(header[:strings.Index(header, "tark1qr34")])
 	balanceX := lipgloss.Width(header[:strings.Index(header, "123,456")])
-	if _, cmd := m.Update(tea.MouseClickMsg{X: balanceX, Y: 1, Button: tea.MouseLeft}); cmd != nil {
+	if _, cmd := m.Update(tea.MouseClickMsg{X: balanceX, Y: 2, Button: tea.MouseLeft}); cmd != nil {
 		t.Fatal("balance click copied address")
 	}
-	click := tea.MouseClickMsg{X: addressX, Y: 1, Button: tea.MouseLeft}
+	click := tea.MouseClickMsg{X: addressX, Y: 2, Button: tea.MouseLeft}
 	_, cmd := m.Update(click)
 	if cmd == nil {
 		t.Fatal("copy button did not respond")

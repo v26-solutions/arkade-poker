@@ -304,8 +304,23 @@ func (h *handHarness) evaluateAndSettle(submitter int) {
 	h.at += 30
 	h.action(submitter, Input{Kind: Progress})
 	for _, g := range h.games {
-		if g.stage != StageFinished || g.outcome == nil || g.prepared != nil {
+		if g.stage != StageFinished || g.outcome == nil || g.prepared != nil || g.hand != nil {
 			h.t.Fatal("missing accepted terminal outcome")
+		}
+		snap, err := g.Snapshot()
+		if err != nil || snap.State == nil || snap.Choice != nil {
+			h.t.Fatal("settled table lost or still actionable", err)
+		}
+		for _, card := range dealOrder(snap.Cards) {
+			if !card.Known {
+				h.t.Fatal("settlement hid a revealed card")
+			}
+		}
+		// Snapshot callers cannot mutate the saved final display state.
+		snap.State.Wagers.Player1++
+		again, _ := g.Snapshot()
+		if again.State.Wagers.Player1 == snap.State.Wagers.Player1 {
+			h.t.Fatal("shared final state pointer")
 		}
 	}
 }
@@ -368,7 +383,35 @@ func TestOrdinaryHandRealEmulatorAndReplay(t *testing.T) {
 			h.automaticBoard()
 		}
 	}
-	h.action(h.actor(), Input{Kind: RevealShowdown})
+	first := h.actor()
+	for i, g := range h.games {
+		snap, err := g.Snapshot()
+		if err != nil {
+			t.Fatal(err)
+		}
+		holes := snap.Cards.HoleCards.Player2
+		if i == 1 {
+			holes = snap.Cards.HoleCards.Player1
+		}
+		if holes[0].Known || holes[1].Known {
+			t.Fatal("opponent exposed before showdown reveal")
+		}
+	}
+	h.action(first, Input{Kind: RevealShowdown})
+	for i, g := range h.games {
+		snap, err := g.Snapshot()
+		if err != nil {
+			t.Fatal(err)
+		}
+		holes := snap.Cards.HoleCards.Player2
+		if i == 1 {
+			holes = snap.Cards.HoleCards.Player1
+		}
+		want := i != first
+		if holes[0].Known != want || holes[1].Known != want {
+			t.Fatal("accepted reveal not reflected for the right opponent")
+		}
+	}
 	h.action(h.actor(), Input{Kind: RevealShowdown})
 	h.evaluateAndSettle(-1)
 	h.replay()

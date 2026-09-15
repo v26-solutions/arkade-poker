@@ -19,7 +19,11 @@ func TestKeyIngress(t *testing.T) {
 	data, _ := hex.DecodeString(hexKey)
 	words, _ := bech32.ConvertBits(data, 8, 5, true)
 	nsec, _ := bech32.Encode("nsec", words)
-	for _, input := range []string{hexKey, nsec, strings.ToUpper(nsec)} {
+	for _, input := range []string{
+		hexKey, nsec, strings.ToUpper(nsec),
+		" " + hexKey, hexKey + "\n", "\t\r\n" + hexKey + "\u00a0 ",
+		" " + nsec, nsec + "\n", "\t\r\n" + nsec + "\u00a0 ",
+	} {
 		k, err := ParseKey(input, "")
 		if err != nil {
 			t.Fatal(err)
@@ -39,7 +43,8 @@ func TestKeyIngress(t *testing.T) {
 	wrongPrefix, _ := bech32.Encode("npub", words)
 	wrongChecksumType, _ := bech32.EncodeM("nsec", words)
 	short, _ := bech32.Encode("nsec", words[:len(words)-1])
-	invalid := []string{"", " " + hexKey, hexKey + "\n", hexKey + "0", "0x" + hexKey,
+	invalid := []string{"", " \t\r\n\u00a0", hexKey + "0", "0x" + hexKey,
+		hexKey[:32] + " " + hexKey[32:], nsec[:31] + " " + nsec[31:],
 		strings.Repeat("0", 64), strings.Repeat("f", 64),
 		"fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", // N
 		wrongPrefix, wrongChecksumType, short, nsec[:62] + "!", "nSeC" + nsec[4:], "abandon abandon abandon"}

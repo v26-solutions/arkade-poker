@@ -185,8 +185,11 @@ base64 strings survive persistence and replay, including those opaque fields.
 
 Private opening shares are generated only after the locked opposing opening is
 admitted, and become visible only after recording. Snapshots show one's own holes
-and the complete public board prefix. The opponent's holes remain hidden in the
-UI projection even when internally available for settlement. Merkle evaluation
+and the complete public board prefix. The opponent's holes become visible only
+after both of that player's own reveal shares have been accepted. Settlement
+retains the last accepted state and projected cards as display-only data, while
+releasing the live hand and offering no further hand choices. Replay reconstructs
+the same final table; a fold never reveals cards by itself. Merkle evaluation
 and proof admission use the existing `merkel` implementation. The winner (P1 on
 a tie) may settle immediately; the other player waits 30 seconds after the
 recorded accepted showdown state. Accepted terminal spends alone finish a hand;

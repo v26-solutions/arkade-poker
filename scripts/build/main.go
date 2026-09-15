@@ -45,7 +45,7 @@ func run(args []string) error {
 			return serve(args[1])
 		}
 	}
-	return fmt.Errorf("usage: go run ./scripts/build web [flags]|source|artifacts|qualify <shuffle|storage|transport>|serve <web|shuffle|storage>")
+	return fmt.Errorf("usage: go run ./scripts/build web [flags]|source|artifacts|qualify <ui|shuffle|storage|transport>|serve <web|ui|shuffle|storage>")
 }
 
 func goCommand(dir string, env []string, args ...string) *exec.Cmd {

@@ -4,100 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"arkade-poker/go/internal/covenant"
 	"arkade-poker/go/internal/game"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
-func card(c game.KnownCard) string {
-	rank, suit := "", "·"
-	if c.Known && c.Index < 52 {
-		rank = []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}[c.Index%13]
-		suit = []string{"♣", "♦", "♥", "♠"}[c.Index/13]
-	}
-	return panelStyle.Width(7).Height(3).Align(lipgloss.Center).Render(rank + "\n" + suit + "\n" + rank)
-}
-func cardRow(cards ...game.KnownCard) string {
-	parts := []string{}
-	for i, c := range cards {
-		if i != 0 {
-			parts = append(parts, "  ")
-		}
-		parts = append(parts, card(c))
-	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
-}
 func termsText(t game.Terms) string {
-	return fmt.Sprintf("Stake: %d sats   Bond: %d sats\nMinimum bet: %d sats   Maximum wager: %d sats", t.Stake, t.Bond, t.MinBet, t.MaxWager)
-}
-func (m *Model) actionRow() string {
-	a := m.actions()
-	parts := []string{}
-	for i, action := range a {
-		label := "[" + strings.ToUpper(action.key) + "] " + action.label
-		style := textStyle.Padding(0, 1)
-		if i == m.selected {
-			// The qualified browser rendered inverse selection as an unreadable
-			// solid rectangle. An explicit marker keeps the label readable too.
-			label = "> " + label
-			style = style.Bold(true).Underline(true)
-		}
-		parts = append(parts, style.Render(label))
-	}
-	return strings.Join(parts, "  ")
-}
-func (m *Model) body() string {
-	s := m.snapshot
-	if m.modal != noModal {
-		return m.modalBody()
-	}
-	if s.Outcome != nil {
-		o := s.Outcome
-		title := map[game.OutcomeKind]string{game.Won: "YOU WON", game.Lost: "HAND COMPLETE", game.Tied: "SPLIT POT", game.Aborted: "SESSION ABORTED"}[o.Kind]
-		body := title
-		if o.Kind == game.Aborted {
-			body += "\n\n" + o.AbortReason
-		} else if o.Transaction != nil {
-			body += "\n\nAccepted payout transaction\n" + o.Transaction.TxHash().String()
-			out := o.Payouts.Player1
-			if s.Role == covenant.Player2 {
-				out = o.Payouts.Player2
-			}
-			if out.Hash == o.Transaction.TxHash() && int(out.Index) < len(o.Transaction.TxOut) {
-				body += fmt.Sprintf("\n\nYour payout: %d sats\nOutput %d", o.Transaction.TxOut[out.Index].Value, out.Index)
-			}
-		}
-		return body + "\n\n" + m.actionRow()
-	}
-	if s.State != nil {
-		c := s.Cards
-		holes, wager, opponent := c.HoleCards.Player1, s.State.Wagers.Player1, s.State.Wagers.Player2
-		if s.Role == covenant.Player2 {
-			holes, wager, opponent = c.HoleCards.Player2, opponent, wager
-		}
-		street := map[covenant.Street]string{covenant.PreFlop: "PRE-FLOP", covenant.Flop: "FLOP", covenant.Turn: "TURN", covenant.River: "RIVER"}[s.State.Phase.Street]
-		if street == "" {
-			street = "BOARD"
-		}
-		pot := uint64(s.Terms.Stake)*2 + s.State.Wagers.Player1 + s.State.Wagers.Player2
-		body := street + "\n" + cardRow(c.Flop[0], c.Flop[1], c.Flop[2], c.Turn, c.River)
-		body += fmt.Sprintf("\nPOT %d SATS  |  Bonds %d sats each\n\nYOUR HAND · PLAYER %d\n", pot, s.Terms.Bond, s.Role)
-		body += cardRow(holes[:]...)
-		if !m.stopped && s.Role == covenant.Player1 && s.State.Phase.Kind == covenant.AwaitPlayer2RevealAndOpening && !holes[0].Known && !holes[1].Known {
-			body += "\nYour cards appear after Player 2 checks or raises."
-		}
-		body += fmt.Sprintf("\nYour wager %d  |  Opponent wager %d  |  Available wager %d sats", wager, opponent, uint64(s.Terms.MaxWager)-wager)
-		return body + "\n\n" + m.actionRow()
-	}
-	if s.Invitation != nil {
-		return "SESSION READY\n\n" + termsText(s.Terms) + fmt.Sprintf("\n\nYou are Player %d\n", s.Role) + "\n" + m.actionRow()
-	}
-	body := "   ▄▀█ █▀█ █▄▀ ▄▀█ █▀▄ █▀▀\n   █▀█ █▀▄ █ █ █▀█ █▄▀ ██▄\n\n      █▀█ █▀█ █▄▀ █▀▀ █▀█\n      █▀▀ █▄█ █ █ ██▄ █▀▄"
-	if m.key == nil {
-		return body + "\n\nImport an externally funded Ark wallet.\n\n[A] Add Wallet"
-	}
-	return body + "\n\n" + m.actionRow()
+	return fmt.Sprintf("STAKE %s SATS   /   BOND %s SATS\nMINIMUM BET %s   /   MAXIMUM WAGER %s", formatSats(t.Stake), formatSats(t.Bond), formatSats(t.MinBet), formatSats(t.MaxWager))
 }
 
 func (m *Model) modalBody() string {

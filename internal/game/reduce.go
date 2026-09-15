@@ -57,6 +57,14 @@ type Game struct {
 	prepared  *preparedState
 	evaluated *evaluatedState
 	outcome   *Outcome
+	completed *completedTable
+}
+
+// Only display data survives settlement. Keeping a handState here would leave
+// a spent covenant available to the live action machinery.
+type completedTable struct {
+	state covenant.State
+	cards covenant.DealtCards[KnownCard]
 }
 
 func New(config Config) (*Game, error) {
@@ -325,6 +333,10 @@ func (g *Game) Snapshot() (Snapshot, error) {
 			o.Transaction = o.Transaction.Copy()
 		}
 		s.Outcome = &o
+	}
+	if g.completed != nil {
+		state := g.completed.state
+		s.State, s.Cards = &state, g.completed.cards
 	}
 	if g.stage == StageInit && g.nextEvent != 0 {
 		s.Choice = &Choice{Allowed: []InputKind{StartSession, JoinSession}}

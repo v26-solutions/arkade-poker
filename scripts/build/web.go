@@ -48,8 +48,11 @@ func buildWASM(target, output string) error {
 		return err
 	}
 	// Retain upstream booba's signal/TTY stubs and temporary modfile handling.
-	return goRun(temp, []string{"CGO_ENABLED=0"}, "run", "github.com/NimbleMarkets/go-booba/cmd/booba-wasm-build",
-		"-trimpath", "-buildvcs=false", "-o", output, target)
+	args := []string{"run", "github.com/NimbleMarkets/go-booba/cmd/booba-wasm-build", "-trimpath", "-buildvcs=false", "-o", output}
+	if target == "./cmd/ui-preview" {
+		args = append(args, "-tags=uipreview")
+	}
+	return goRun(temp, []string{"CGO_ENABLED=0"}, append(args, target)...)
 }
 
 func buildWeb(target, output, extraHTML string, settings appconfig.Config) error {
@@ -150,6 +153,13 @@ func buildWeb(target, output, extraHTML string, settings appconfig.Config) error
 }
 
 func qualify(kind string) error {
+	if kind == "ui" {
+		html, err := os.ReadFile("web/qualification/ui.html")
+		if err != nil {
+			return err
+		}
+		return buildWeb("./cmd/ui-preview", "build/ui-qualification", string(html), appconfig.Defaults())
+	}
 	if kind != "shuffle" && kind != "storage" && kind != "transport" {
 		return fmt.Errorf("unknown qualification: %s", kind)
 	}

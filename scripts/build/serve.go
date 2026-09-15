@@ -19,6 +19,8 @@ func serve(kind string) error {
 		port = "5174"
 	case "storage":
 		port = "5175"
+	case "ui":
+		port = "5176"
 	default:
 		return fmt.Errorf("unknown server: %s", kind)
 	}
@@ -36,7 +38,7 @@ func serve(kind string) error {
 func pageHandler(directory, kind string) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /", http.FileServer(http.Dir(directory)))
-	if kind == "web" {
+	if kind == "web" || kind == "ui" {
 		return mux
 	}
 	mux.HandleFunc("POST /qualification-result", func(w http.ResponseWriter, r *http.Request) {

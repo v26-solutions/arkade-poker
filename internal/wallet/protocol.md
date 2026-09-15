@@ -6,7 +6,8 @@ owns funding freshness, poker layout, deadlines, durable signing/submission work
 accepted indexer evidence and retry decisions. None of these checks are replaced
 by a wallet service response.
 
-Key import tries NIP-19 nsec, then hexadecimal, then BIP39 on decode errors.
+Key import trims leading and trailing whitespace, then tries NIP-19 nsec,
+hexadecimal and BIP39 on decode errors.
 Decoded raw keys must be exactly 32 bytes and a nonzero scalar below secp256k1's
 order. Mnemonics use `go-bip39` validation/seed derivation with an empty passphrase,
 then `btcutil/hdkeychain` derives `m/86'/coinType'/0'/0/0`. Coin type is 0 for

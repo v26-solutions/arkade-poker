@@ -86,7 +86,7 @@ func TestCountdownClaimRequiresDriverChoice(t *testing.T) {
 			next.Choice = &game.Choice{Allowed: []game.InputKind{game.ClaimTimeout}}
 			m.driverUpdate(driverMsg{update: game.Update{Snapshot: next}})
 			view := ansi.Strip(m.View().Content)
-			if !strings.Contains(view, "Claim timeout available") || !strings.Contains(view, "[D] Claim timeout") {
+			if !strings.Contains(view, "Claim timeout available") || !strings.Contains(view, "[D] CLAIM TIMEOUT") {
 				t.Fatal("driver-authorized timeout is not visible")
 			}
 			var cmd tea.Cmd
@@ -97,7 +97,7 @@ func TestCountdownClaimRequiresDriverChoice(t *testing.T) {
 				cmd = press(m, tea.KeyEnter, 0)
 			case "mouse":
 				for y, line := range strings.Split(view, "\n") {
-					if x := strings.Index(line, "[D] Claim timeout"); x >= 0 {
+					if x := strings.Index(line, "[D] CLAIM TIMEOUT"); x >= 0 {
 						_, cmd = m.Update(tea.MouseClickMsg{X: lipgloss.Width(line[:x]) + 2, Y: y, Button: tea.MouseLeft})
 						break
 					}

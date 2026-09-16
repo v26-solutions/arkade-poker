@@ -19,6 +19,7 @@ func TestRedactionBeforeRetentionAndOutput(t *testing.T) {
 		"hex":                strings.Repeat("ab", 32),
 		"uppercase hex":      strings.Repeat("CD", 32),
 		"nsec":               "nsec1" + strings.Repeat("q", 58),
+		"invitation":         "arkpg1:" + strings.Repeat("Ab9_-xZ", 24),
 		"WIF":                "L" + strings.Repeat("a", 51),
 		"extended key":       "xprv" + strings.Repeat("a", 107),
 		"mnemonic":           phrase,

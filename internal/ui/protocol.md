@@ -156,6 +156,8 @@ Saved records exclude the raw key, its hex/nsec text and the invalid entered tex
 A valid invitation over 4096 characters uncovered an overflowing relay review;
 the bounded read-only field fixes it. Complete invite copy/join payloads,
 minimum-grid layout, native race/vet and both host builds pass after that fix.
+Compact invitation sharing now uses unpadded base64url; the long-relay regression
+still covers complete copy/join payloads over 2048 characters.
 
 Selected buttons use an explicit near-black (#010101) foreground and green
 background. The pinned Ghostty renderer treats RGB(0,0,0) as the default green

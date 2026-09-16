@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"io"
-	"strings"
 	"unicode/utf8"
 
 	"arkade-poker/go/internal/covenant"
@@ -175,16 +173,6 @@ func invitationID(inv Invitation) (SessionID, error) {
 	}
 	return SessionID(digest("arkade-poker/session/v1", b)), nil
 }
-func EncodeInvitation(inv Invitation) (string, error) {
-	b, err := invitationBinary(inv)
-	if err != nil {
-		return "", err
-	}
-	if SessionID(digest("arkade-poker/session/v1", b)) != inv.SessionID {
-		return "", ErrInvitation
-	}
-	return "arkpg1:" + hex.EncodeToString(b), nil
-}
 func decodeInvitationBinary(data []byte) (Invitation, error) {
 	body, err := checkedBody(data, 4096)
 	if err != nil {
@@ -209,22 +197,6 @@ func decodeInvitationBinary(data []byte) (Invitation, error) {
 	}
 	inv.SessionID = SessionID(digest("arkade-poker/session/v1", b))
 	return inv, nil
-}
-func DecodeInvitation(s string) (Invitation, error) {
-	s, ok := strings.CutPrefix(s, "arkpg1:")
-	if !ok || len(s) > 8192 || len(s)%2 != 0 {
-		return Invitation{}, ErrInvitation
-	}
-	for _, c := range s {
-		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
-			return Invitation{}, ErrInvitation
-		}
-	}
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return Invitation{}, ErrInvitation
-	}
-	return decodeInvitationBinary(b)
 }
 
 func encodeParticipant(w *encoder, p covenant.Participant) {

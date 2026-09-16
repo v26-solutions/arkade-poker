@@ -233,7 +233,7 @@ func TestInvitationReviewAndCopyPreserveCompletePayload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(token) <= 4096 {
+	if len(token) <= 2048 {
 		t.Fatal("fixture must exercise long valid invitation")
 	}
 	m := playing()

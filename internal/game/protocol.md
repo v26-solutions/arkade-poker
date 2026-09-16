@@ -90,10 +90,20 @@ these exact codecs. There is no Rust wire/log compatibility requirement.
 - Invitation: `arkade-poker/invitation\0`, u16(1), four u64 terms, service hash32,
   creator transport xonly32, random join capability32, exact relay string,
   SHA256 checksum over preceding bytes. Session ID is SHA256 of
-  `arkade-poker/session/v1` and these complete invitation bytes. Sharing uses
-  `arkpg1:` and lowercase hexadecimal. Relay UTF-8 is limited to 2048 bytes;
-  syntax admission preserves the reference's ws/wss, authority, whitespace,
-  userinfo and fragment checks without URL normalization.
+  `arkade-poker/session/v1` and these complete invitation bytes. These internal
+  bytes remain distinct from the compact sharing format below. Relay UTF-8 is
+  limited to 2048 bytes; syntax admission preserves the reference's ws/wss,
+  authority, whitespace, userinfo and fragment checks without URL normalization.
+- Invitation sharing: `arkpg1:` followed by unpadded base64url of four unsigned
+  LEB128 terms (stake, bond, minimum bet, maximum wager), service hash32, creator
+  transport xonly32, join capability32, unsigned LEB128 relay byte length, exact
+  relay UTF-8 and the first eight bytes of the internal invitation's SHA256
+  checksum. The prefix identifies the domain/version; neither is repeated in
+  the payload. Decoding rejects overflow, overlong integers, noncanonical base64,
+  padding, whitespace, trailing bytes and invalid invitation fields. Relay length
+  is checked against 2048 and remaining bytes before reading. Reconstruct the
+  complete internal encoding, including its full checksum, before deriving the
+  session ID or protocol commitments. No earlier sharing format is accepted.
 - Public message: `arkade-poker/message\0`, u16(1), session32, role u8 (1 or 2),
   transport xonly32, sequence u64, kind u8 and exactly that kind's payload.
   KeyOffer/KeyReply carry participant (wallet xonly32, shuffle SEC1 key33, payout

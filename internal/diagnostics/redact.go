@@ -14,7 +14,7 @@ var (
 	// A raw private scalar is indistinguishable from a hash. Conservatively
 	// redact long hex values, including inside larger serialized payloads.
 	hexSecret     = regexp.MustCompile(`(?i)[0-9a-f]{64,}`)
-	encodedSecret = regexp.MustCompile(`(?i)nsec1[0-9a-z]+|[xtyz]prv[1-9A-HJ-NP-Za-km-z]+|\b[5KL9c][1-9A-HJ-NP-Za-km-z]{50,51}\b`)
+	encodedSecret = regexp.MustCompile(`(?i)arkpg[0-9]+:[a-z0-9_-]+|nsec1[0-9a-z]+|[xtyz]prv[1-9A-HJ-NP-Za-km-z]+|\b[5KL9c][1-9A-HJ-NP-Za-km-z]{50,51}\b`)
 	// For unstructured dependency/error text, discard everything after a
 	// sensitive label. This also covers quoted, multiline and array values.
 	labeledSecret = regexp.MustCompile(`(?is)\b(?:private[ _-]?key|privkey|secret(?:[ _-]?key)?|transport[ _-]?secret|shuffle[ _-]?secret|mnemonic|seed(?:[ _-]?phrase)?|nsec|xprv|wallet[ _-]?key)\b["']?\s*[:=]\s*.*`)

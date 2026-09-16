@@ -14,6 +14,10 @@ func (m *Model) dialog(f *screen) {
 	base := f.content()
 	f.layers = []*lipgloss.Layer{lipgloss.NewLayer(dimStyle.Render(ansi.Strip(base)))}
 	f.hits = nil
+	if m.helpOpen {
+		m.helpDialog(f)
+		return
+	}
 	title, body, primary := "", "", ""
 	if m.modal == allInModal {
 		title, primary = "ALL IN?", "[ENTER] ALL IN"
@@ -93,7 +97,7 @@ func (m *Model) dialog(f *screen) {
 	}
 	maxH := max(10, f.h-9)
 	if f.w < 76 || f.h < 30 {
-		maxH = f.h
+		maxH = f.h - 3
 	}
 	// Keep error feedback and both controls visible, even on a small grid.
 	limit := max(1, maxH-7)
@@ -109,7 +113,7 @@ func (m *Model) dialog(f *screen) {
 	h := len(lines) + 7
 	x, y := (f.w-w)/2, max(0, (f.h-8-h)/2)
 	if f.h < 30 {
-		y = max(0, (f.h-h)/2)
+		y = max(0, (f.h-3-h)/2)
 	}
 	f.put(x, y, panel(title, w, h))
 	f.put(x+3, y+2, textStyle.Render(fit(strings.Join(lines, "\n"), inner, len(lines), false)))

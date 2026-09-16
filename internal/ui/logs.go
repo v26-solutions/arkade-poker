@@ -10,7 +10,7 @@ import (
 type logsCopiedMsg struct{ err error }
 
 func (m *Model) logShortcut(msg tea.KeyPressMsg) bool {
-	if m.modal == walletModal || m.modal == createModal || m.modal == joinModal || m.modal == raiseModal {
+	if !m.helpOpen && (m.modal == walletModal || m.modal == createModal || m.modal == joinModal || m.modal == raiseModal) {
 		return false
 	}
 	if msg.Mod & ^(tea.ModShift|tea.ModCapsLock) != 0 {

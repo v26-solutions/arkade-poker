@@ -26,6 +26,8 @@ const context = vm.createContext({
   fetch: async () => { throw new Error(`fixture connection failure ${secret} ${phrase}`); },
   navigator: { clipboard: {
     writeText: async text => {
+      // Expose the in-flight state so each retry waits for application feedback.
+      await new Promise(resolve => setTimeout(resolve, 100));
       if (denyCopy) throw new Error('fixture permission denied');
       copies.push(text);
     },
@@ -51,7 +53,10 @@ try {
   await until(() => context.bubbletea_write, 'terminal bridge');
   context.bubbletea_resize(100, 35);
   await until(() => consoleLines.some(line => line.includes('Network discovery failed')), 'redacted network error');
-  await until(() => terminal.includes('[L] COPY LOGS'), 'shortcut hint');
+  await until(() => terminal.includes('[?] Help'), 'persistent help control');
+  assert.ok(!terminal.includes('[L] Copy Logs'), 'logs hint outside help');
+  context.bubbletea_write('?');
+  await until(() => terminal.includes('[L] Copy Logs'), 'help log control');
 
   context.bubbletea_write('l');
   await until(() => copies.length === 1, 'lowercase copy');
@@ -61,33 +66,53 @@ try {
   assert.match(copies[0], /\[REDACTED\]/);
   assert.ok(consoleLines.every(line => copies[0].includes(line)), 'console records differ from clipboard');
 
+  context.bubbletea_write('\x1b');
+  terminal = '';
+  await until(() => terminal.includes('[A] ADD WALLET'), 'help closed');
   context.bubbletea_write('a');
   await until(() => terminal.includes('IMPORT WALLET'), 'wallet form');
   context.bubbletea_write('lL');
-  // A redraw proves both input events have been processed, without copying.
+  // The renderer may emit the two cells in separate ANSI cursor updates.
   terminal = '';
-  await until(() => terminal.includes('••'), 'both letters entered as password text');
+  await until(() => (terminal.match(/•/g) || []).length >= 2, 'both letters entered as password text');
   assert.equal(copies.length, 1, 'text entry copied logs');
+  context.bubbletea_write('?');
+  terminal = '';
+  await until(() => terminal.includes('[L] Copy Logs'), 'help over wallet form');
+  context.bubbletea_write('L');
+  await until(() => copies.length === 2, 'copy with wallet form covered');
+  context.bubbletea_write('\x1b');
+  terminal = '';
+  await until(() => terminal.includes('••'), 'wallet input restored');
   context.bubbletea_write('\x1b');
   terminal = '';
   await until(() => terminal.includes('[A] ADD WALLET'), 'wallet form closed');
 
+  context.bubbletea_write('?');
+  terminal = '';
+  await until(() => terminal.includes('[L] Copy Logs'), 'help reopened');
+  context.bubbletea_write('\x1b[6~');
+  terminal = '';
+  await until(() => terminal.includes('RESUME & TROUBLESHOOT'), 'help scrolled');
+  terminal = '';
   context.bubbletea_write('L');
-  await until(() => copies.length === 2, 'uppercase copy');
+  await until(() => copies.length === 3, 'uppercase copy');
+  await until(() => terminal.includes('Logs copied'), 'uppercase copy completed');
   denyCopy = true;
   context.bubbletea_write('l');
   terminal = '';
-  await until(() => terminal.includes('Could not copy logs'), 'clipboard denial feedback');
+  // The unchanged "Co" prefix can remain on screen from "Copying logs...".
+  await until(() => terminal.includes('not copy logs'), 'clipboard denial feedback');
   assert.ok(consoleLines.some(line => line.includes('Log clipboard copy failed')));
   denyCopy = false;
   context.bubbletea_write('l');
-  await until(() => copies.length === 3, 'retry after denial');
+  await until(() => copies.length === 4, 'retry after denial');
 
   for (const output of [...consoleLines, ...copies]) {
     assert.ok(!output.includes(secret), 'private key leaked');
     assert.ok(!output.includes('abandon'), 'mnemonic leaked');
   }
-  console.log('PASS: WASM clipboard, console, secret redaction, text entry and copy retry');
+  console.log('PASS: WASM help, scrolling, clipboard, console, secret redaction, text entry and copy retry');
 } finally {
   for (const timer of timers) clearTimeout(timer);
 }

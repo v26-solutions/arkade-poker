@@ -55,9 +55,14 @@ and returns to Create/Join with the wallet still loaded. Each player must abort
 on their own device and use a new invitation. If funding has already begun,
 abort retains the saved game so it can be resumed.
 
+Click **[?] Help** at the far left of the status bar, or press **?**, for a quick
+guide to setup, play and recovery. Scroll with the arrow keys, Page Up/Down or
+mouse wheel; **Esc** returns to your table or form without losing input.
+**[L] Copy Logs** stays at the top of Help, with copy success or failure below it.
+
 Press **L** (or **l**) to copy diagnostic logs in either the terminal or browser.
 The shortcut works during waits and in confirmation dialogs; text fields keep
-both letters as normal input. Copy success or failure appears above the wallet.
+both letters as normal input. Outside Help, copy feedback appears in the status bar.
 Logs cover the current run and retain up to 2,048 recent entries (1 MiB), with
 private-key fields, key encodings and mnemonic phrases redacted before retention.
 Long hexadecimal values are conservatively redacted too. The browser also writes

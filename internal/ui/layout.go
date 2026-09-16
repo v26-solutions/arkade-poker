@@ -125,18 +125,13 @@ func (s *screen) buttons(items []screenButton, x, y, w int) {
 func (m *Model) layout() *screen {
 	w, h := max(1, m.width), max(1, m.height)
 	f := &screen{w: w, h: h}
-	// Keep log feedback above every modal and the small-window fallback.
-	defer func() {
-		label := "[L] COPY LOGS"
-		if m.frame < m.logNoticeUntil {
-			label = m.logNotice
-		}
-		f.put(0, 0, textStyle.Render(ansi.Truncate(label, w, "…")))
-	}()
+	// Help and status remain visible and clickable above every modal, including
+	// the small-window fallback.
+	defer func() { m.statusSection(f, h-3) }()
 	f.put(0, 0, textStyle.Render(fit("", w, h, false)))
 	if w < 76 || h < 30 {
 		f.put(0, 0, textStyle.Render(fit(fmt.Sprintf("ARKADE POKER\n\nResize to at least 76 × 30\nCurrent: %d × %d\n\nYour input is preserved.", w, h), w, h, true)))
-		if m.modal == exitModal || m.modal == clearGameModal || m.modal == abortSetupModal {
+		if m.helpOpen || m.modal == exitModal || m.modal == clearGameModal || m.modal == abortSetupModal {
 			m.dialog(f)
 		}
 		return f
@@ -230,8 +225,7 @@ func (m *Model) layout() *screen {
 	} else {
 		f.put(2, actionY+2, dimStyle.Render(fit(m.actionHint(), w-4, 1, true)))
 	}
-	m.statusSection(f, statusY)
-	if m.modal != noModal {
+	if m.helpOpen || m.modal != noModal {
 		m.dialog(f)
 	}
 	return f
@@ -254,6 +248,16 @@ func (m *Model) actionHint() string {
 }
 
 func (m *Model) statusSection(f *screen, y int) {
+	const help = "[?] Help"
+	if f.w < 16 || f.h < 3 {
+		f.put(0, f.h-1, textStyle.Render(ansi.Truncate(help, f.w, "…")))
+		f.region("help", 0, f.h-1, min(len(help), f.w), 1)
+		return
+	}
+	f.put(0, y, panel("GAME STATUS", f.w, 3))
+	f.put(2, y+1, textStyle.Render(help+" │ "))
+	f.region("help", 2, y+1, len(help), 1)
+	const statusX = 2 + len(help) + 3
 	network := m.network
 	if m.session != nil && m.session.Network != "" {
 		network = m.session.Network
@@ -262,6 +266,7 @@ func (m *Model) statusSection(f *screen, y int) {
 		network = "…"
 	}
 	network = clean(network) + " ●"
+	network = ansi.Truncate(network, max(0, f.w-statusX-3), "…")
 	status := clean(m.status)
 	if c := m.snapshot.Choice; allowed(c, game.Bet) && c.CanCall && m.snapshot.Outcome == nil {
 		status = "TO CALL " + formatSats(c.CallAmount) + " SATS / " + status
@@ -278,9 +283,11 @@ func (m *Model) statusSection(f *screen, y int) {
 	if m.errorText != "" {
 		status = "ERROR / " + clean(m.errorText)
 	}
-	f.put(0, y, panel("GAME STATUS", f.w, 3))
-	available := max(1, f.w-5-lipgloss.Width(network))
-	f.put(2, y+1, textStyle.Render(ansi.Truncate(status, available, "…")))
+	if !m.helpOpen && m.frame < m.logNoticeUntil {
+		status = m.logNotice
+	}
+	available := max(0, f.w-statusX-3-lipgloss.Width(network))
+	f.put(statusX, y+1, textStyle.Render(ansi.Truncate(status, available, "…")))
 	f.put(f.w-lipgloss.Width(network)-2, y+1, dimStyle.Render(network))
 }
 

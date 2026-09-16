@@ -109,11 +109,18 @@ returns to the prior form without losing its input; only confirmed exit cancels
 the runtime. Browser Ctrl+C/Q have no exit binding. Exit confirmation remains
 visible below the usual 76x30 minimum grid. Other resize handling preserves form
 contents. Keyboard, paste and action/header/exit mouse controls use the same model.
+The far-left status control `[?] Help` remains clickable in all states, including
+dialogs and the small-window fallback. `?` toggles Help without resetting the
+underlying form, confirmation or error. Its concise setup/play/recovery guide
+scrolls with arrows, Page Up/Down, Home/End, the mouse wheel or clickable scroll
+controls. `[L] Copy Logs` and its feedback stay above the scrolling instructions.
+Escape/Enter closes Help. Help consumes covered form input and game actions;
+driver updates and deadline handling continue, including stale-bet invalidation.
 L/l copies the current diagnostic snapshot on both hosts, including busy/stopped
 states and confirmation dialogs. Text-entry forms retain both letters as input;
 paste and browser modifier shortcuts are unaffected. Copy runs as a command,
-suppresses duplicate in-flight requests, and reports success/failure above every
-dialog without clearing an existing game error. Logs are bounded, process-local,
+suppresses duplicate in-flight requests, and reports success/failure in Help or
+the status bar without clearing an existing game error. Logs are bounded, process-local,
 and sanitized before retention or browser-console output. Only operation names,
 enum metadata and redacted errors are recorded; private journal payloads, input
 text and wallet objects are excluded.

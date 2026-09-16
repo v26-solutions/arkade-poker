@@ -75,6 +75,8 @@ type Model struct {
 	width, height     int
 	modal             modal
 	previousModal     modal
+	helpOpen          bool
+	helpScroll        int
 	exitConfirm       bool
 	input             textinput.Model
 	key               *wallet.Key
@@ -202,6 +204,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i := range m.fields {
 			m.fields[i].SetWidth(max(10, min(46, m.width-26)))
 		}
+		m.scrollHelp(0)
 	case tickMsg:
 		m.frame++
 		m.now = time.Time(msg)
@@ -293,11 +296,40 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.stopped = true
 		}
 		return m, nil
+	case tea.MouseWheelMsg:
+		if m.helpOpen {
+			switch msg.Button {
+			case tea.MouseWheelUp:
+				m.scrollHelp(-3)
+			case tea.MouseWheelDown:
+				m.scrollHelp(3)
+			}
+			return m, nil
+		}
 	case tea.MouseClickMsg:
-		if msg.Button != tea.MouseLeft || m.clearing {
+		if msg.Button != tea.MouseLeft {
 			return m, nil
 		}
 		id := m.layout().hit(msg.X, msg.Y)
+		if id == "help" {
+			return m, m.toggleHelp()
+		}
+		if m.helpOpen {
+			switch id {
+			case "logs":
+				return m, m.copyLogs()
+			case "help-close":
+				return m, m.toggleHelp()
+			case "help-up":
+				m.scrollHelp(-m.helpPageSize())
+			case "help-down":
+				m.scrollHelp(m.helpPageSize())
+			}
+			return m, nil
+		}
+		if m.clearing {
+			return m, nil
+		}
 		switch id {
 		case "wallet":
 			return m, m.openWallet()
@@ -340,11 +372,36 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.KeyPressMsg:
+		if msg.Mod & ^(tea.ModShift|tea.ModCapsLock) == 0 && (msg.Code == '?' || msg.Text == "?") {
+			return m, m.toggleHelp()
+		}
 		if m.logShortcut(msg) {
 			return m, m.copyLogs()
 		}
 		key := msg.String()
+		if m.helpOpen && key != "ctrl+c" {
+			switch key {
+			case "esc", "enter":
+				return m, m.toggleHelp()
+			case "up":
+				m.scrollHelp(-1)
+			case "down":
+				m.scrollHelp(1)
+			case "pgup":
+				m.scrollHelp(-m.helpPageSize())
+			case "pgdown", "space":
+				m.scrollHelp(m.helpPageSize())
+			case "home":
+				m.helpScroll = 0
+			case "end":
+				m.scrollHelp(len(m.helpLines()))
+			}
+			return m, nil
+		}
 		if key == "ctrl+c" {
+			if !m.host.Browser {
+				m.helpOpen = false
+			}
 			if !m.host.Browser && m.modal != exitModal {
 				m.previousModal, m.modal, m.exitConfirm = m.modal, exitModal, false
 			}
@@ -424,6 +481,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cmd, handled := m.gameKey(key); handled {
 			return m, cmd
 		}
+	}
+	// Keep pasted text and cursor messages away from forms covered by Help.
+	if m.helpOpen {
+		return m, nil
 	}
 	if m.modal == walletModal {
 		var cmd tea.Cmd

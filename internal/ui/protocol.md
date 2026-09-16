@@ -18,7 +18,10 @@ the pot (two stakes plus both wagers), with bonds separately identified.
 IN THIS HAND is the stake plus cumulative wagers, excluding the bond. Bets
 come from the wallet; no chip stack or table balance is invented. The separately
 queried wallet balance remains authoritative. Unknown cards stay hidden until
-the other player's own reveal shares have been accepted. At settlement the
+the other player's own reveal shares have been accepted. Board cards appear as
+soon as those shares can be combined with recorded local reveal shares, before
+the local transaction is signed, submitted or accepted. Actions and outcomes
+still follow the accepted game state. At settlement the
 reducer saves the final state and projected cards as display data while releasing
 the live hand. Replaying the journal restores exactly that final table. Fold and
 timeout results preserve only cards already known before settlement.

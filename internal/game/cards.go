@@ -197,7 +197,25 @@ func (g *Game) decodedCards(h *handState) ([9]KnownCard, error) {
 	return out, nil
 }
 func (g *Game) knownCards(h *handState) (covenant.DealtCards[KnownCard], error) {
-	cards, err := g.decodedCards(h)
+	// Saved local reveal shares have already passed admission and can complete
+	// a card before signing/submission. Use them only in this display copy;
+	// accepted evidence and showdown evaluation still use the original hand.
+	display := *h
+	if g.prepared != nil && g.prepared.saved.Action.Reveals != nil {
+		state, err := covenant.ReadState(h.accepted.Transaction)
+		if err != nil {
+			return covenant.DealtCards[KnownCard]{}, err
+		}
+		slots := revealSlots(state.Phase)
+		fields := revealFields(g.prepared.saved.Action.Reveals)
+		if len(slots) != len(fields) {
+			return covenant.DealtCards[KnownCard]{}, ErrProtocol
+		}
+		for i, slot := range slots {
+			display.reveals[slot] = fields[i]
+		}
+	}
+	cards, err := g.decodedCards(&display)
 	if err != nil {
 		return covenant.DealtCards[KnownCard]{}, err
 	}

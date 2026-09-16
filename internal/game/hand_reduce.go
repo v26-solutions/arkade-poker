@@ -246,8 +246,6 @@ func (g *Game) reduceHand(e Event) error {
 		if err != nil {
 			return err
 		}
-		g.prepared = nil
-		g.evaluated = nil
 		if outcome != nil {
 			state, err := covenant.ReadState(g.hand.accepted.Transaction)
 			if err != nil {
@@ -258,11 +256,15 @@ func (g *Game) reduceHand(e Event) error {
 				return err
 			}
 			g.completed = &completedTable{state: *state, cards: cards}
+			g.prepared = nil
+			g.evaluated = nil
 			g.outcome = outcome
 			g.hand = nil
 			g.stage = StageFinished
 			return nil
 		}
+		g.prepared = nil
+		g.evaluated = nil
 		g.hand = next
 		return g.routeHand()
 	case OpeningObserved:

@@ -3,10 +3,10 @@
 package palette
 
 const (
-	Accent     = "#7cff00"
-	Muted      = "#95b77c"
-	Border     = "#527339"
-	Highlight  = "#111e07"
+	Accent     = "#f2f2f2"
+	Muted      = "#999999"
+	Border     = "#555555"
+	Highlight  = "#1a1a1a"
 	Background = "#000000"
 	Surface    = "#111111"
 	// The pinned Ghostty renderer treats pure black as default foreground.

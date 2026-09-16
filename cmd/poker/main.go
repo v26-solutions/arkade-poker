@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
+	"runtime"
 
+	"arkade-poker/go/internal/diagnostics"
 	"arkade-poker/go/internal/ui"
 	tea "charm.land/bubbletea/v2"
 	booba "github.com/NimbleMarkets/go-booba"
@@ -12,12 +15,23 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, diagnostics.Redact(err.Error()))
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run() (err error) {
+	logs := diagnostics.New(logOutput())
+	restoreLogging := logs.Install()
+	defer restoreLogging()
+	slog.Info("Application starting", "os", runtime.GOOS, "arch", runtime.GOARCH, "go", runtime.Version())
+	defer func() {
+		if err != nil {
+			slog.Error("Application stopped", "error", err)
+		} else {
+			slog.Info("Application stopped")
+		}
+	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	host, closeHost, err := newHost()
@@ -25,6 +39,10 @@ func run() error {
 		return err
 	}
 	defer closeHost()
+	if host.InitialError != "" {
+		slog.Warn("Initial wallet import failed", "error", host.InitialError)
+	}
+	host.Logs = logs.Snapshot
 	p := booba.NewProgram(ui.New(ctx, host), tea.WithoutSignalHandler())
 	stopSignals := routeSignals(p)
 	defer stopSignals()

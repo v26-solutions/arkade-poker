@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"math"
 	"time"
 
@@ -23,6 +24,11 @@ func (d *Driver) step(ctx context.Context, input Input) (Step, error) {
 	step, err := g.Decide(input)
 	if err != nil || step.Kind != RunEffect {
 		return step, err
+	}
+	// Record the start of blocking work, without flooding logs on wait polls.
+	if d.lastLoggedEffect != step.Effect {
+		slog.Info("Game operation", "operation", step.Effect.diagnosticName(), "stage", g.stage.diagnosticName())
+		d.lastLoggedEffect = step.Effect
 	}
 	switch step.Effect {
 	case PrepareSessionEffect:

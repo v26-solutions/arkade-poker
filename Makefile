@@ -3,7 +3,7 @@ export GO
 BUILD = $(GO) run ./scripts/build
 WEB_FLAGS ?=
 
-.PHONY: all native web test test-wasm test-regtest-hands check clean serve source-release release qualify-shuffle qualify-storage qualify-transport
+.PHONY: all native web test test-wasm test-web-logs test-regtest-hands check clean serve source-release release qualify-shuffle qualify-storage qualify-transport
 all: native web
 
 native:
@@ -17,7 +17,10 @@ test:
 	CGO_ENABLED=0 $(GO) test -tags=purego ./...
 
 test-wasm:
-	CGO_ENABLED=0 GOOS=js GOARCH=wasm $(GO) test -exec='$(CURDIR)/web/wasm-test.sh' ./internal/appconfig ./internal/covenant ./internal/shuffle ./internal/game ./internal/client ./internal/storage ./internal/merkel ./internal/wallet ./internal/nostr ./internal/adapters/indexdata ./internal/adapters/subscription ./internal/adapters/http
+	CGO_ENABLED=0 GOOS=js GOARCH=wasm $(GO) test -exec='$(CURDIR)/web/wasm-test.sh' ./internal/diagnostics ./internal/appconfig ./internal/covenant ./internal/shuffle ./internal/game ./internal/client ./internal/storage ./internal/merkel ./internal/wallet ./internal/nostr ./internal/adapters/indexdata ./internal/adapters/subscription ./internal/adapters/http
+
+test-web-logs: web
+	node --stack-size=8192 web/logs-test.mjs
 
 check: test all
 	$(GO) vet ./...

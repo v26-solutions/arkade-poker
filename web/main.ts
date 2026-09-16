@@ -54,6 +54,7 @@ async function start() {
 
 start().catch(() => {
   // Runtime errors must not accidentally log transient input or wallet objects.
+  console.error('Poker could not start or its runtime stopped.');
   loading.textContent = 'Poker could not start. Reload the page to try again.';
   loading.hidden = false;
 });

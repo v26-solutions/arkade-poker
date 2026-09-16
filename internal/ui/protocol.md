@@ -109,6 +109,17 @@ returns to the prior form without losing its input; only confirmed exit cancels
 the runtime. Browser Ctrl+C/Q have no exit binding. Exit confirmation remains
 visible below the usual 76x30 minimum grid. Other resize handling preserves form
 contents. Keyboard, paste and action/header/exit mouse controls use the same model.
+L/l copies the current diagnostic snapshot on both hosts, including busy/stopped
+states and confirmation dialogs. Text-entry forms retain both letters as input;
+paste and browser modifier shortcuts are unaffected. Copy runs as a command,
+suppresses duplicate in-flight requests, and reports success/failure above every
+dialog without clearing an existing game error. Logs are bounded, process-local,
+and sanitized before retention or browser-console output. Only operation names,
+enum metadata and redacted errors are recorded; private journal payloads, input
+text and wallet objects are excluded.
+`make test-web-logs` exercises the built WASM application's clipboard and console
+paths with isolated browser API fixtures, including permission denial and retry.
+
 The 80-ms status-row spinner displays exactly `shuffling...` during driver proof
 work and replay. App startup queries Arkd info asynchronously, independently of
 wallet import. The status bar right-aligns the discovered network as

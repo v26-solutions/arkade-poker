@@ -124,6 +124,14 @@ func (s *screen) buttons(items []screenButton, x, y, w int) {
 func (m *Model) layout() *screen {
 	w, h := max(1, m.width), max(1, m.height)
 	f := &screen{w: w, h: h}
+	// Keep log feedback above every modal and the small-window fallback.
+	defer func() {
+		label := "[L] COPY LOGS"
+		if m.frame < m.logNoticeUntil {
+			label = m.logNotice
+		}
+		f.put(0, 0, textStyle.Render(ansi.Truncate(label, w, "…")))
+	}()
 	f.put(0, 0, textStyle.Render(fit("", w, h, false)))
 	if w < 76 || h < 30 {
 		f.put(0, 0, textStyle.Render(fit(fmt.Sprintf("ARKADE POKER\n\nResize to at least 76 × 30\nCurrent: %d × %d\n\nYour input is preserved.", w, h), w, h, true)))

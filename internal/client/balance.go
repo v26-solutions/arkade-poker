@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"arkade-poker/go/internal/ports"
@@ -84,6 +85,7 @@ func watchBalance(ctx context.Context, services wallet.Services, subscriber port
 			return
 		}
 		publish(BalanceUpdate{Err: err})
+		slog.Warn("Wallet balance unavailable; retrying", "error", err)
 		// These read-only retries do not restart or advance the game driver.
 		timer := time.NewTimer(time.Second)
 		select {

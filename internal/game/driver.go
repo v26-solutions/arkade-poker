@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -82,6 +83,7 @@ type Driver struct {
 	watch                       *driverWatch
 	recovering, retried         bool
 	updates                     chan<- Update // only the active Run owns this field
+	lastLoggedEffect            EffectKind
 }
 
 func NewDriver(config DriverConfig) (*Driver, error) {
@@ -165,6 +167,7 @@ func (d *Driver) Restore(ctx context.Context) (err error) {
 	return d.restore(ctx)
 }
 func (d *Driver) restore(ctx context.Context) error {
+	slog.Info("Restoring game")
 	public, err := d.config.Wallet.Config()
 	if err != nil {
 		return err
@@ -177,6 +180,7 @@ func (d *Driver) restore(ctx context.Context) error {
 		return err
 	}
 	d.journal = j
+	slog.Info("Game replay complete", "events", j.game.nextEvent, "stage", j.game.stage.diagnosticName())
 	d.loaded = true
 	if d.config.Connect != nil {
 		raw, err := encodeConfig(j.game.config)
@@ -268,11 +272,15 @@ func (d *Driver) Run(ctx context.Context, inputs <-chan Input, updates chan<- Up
 				continue
 			}
 		}
+		if input.Kind != Progress {
+			slog.Info("Player action", "kind", input.Kind.diagnosticName(), "stage", d.journal.game.stage.diagnosticName())
+		}
 		step, stepErr := d.step(ctx, input)
 		userInput := input.Kind != Progress
 		input = Input{Kind: Progress}
 		if stepErr != nil {
 			if userInput && (errors.Is(stepErr, ErrInput) || errors.Is(stepErr, ErrAmount)) {
+				slog.Warn("Player action rejected", "error", stepErr)
 				if err := d.emit(ctx, nil, false, stepErr); err != nil {
 					return err
 				}
@@ -297,6 +305,7 @@ func (d *Driver) Run(ctx context.Context, inputs <-chan Input, updates chan<- Up
 			}
 			// The journal start precedes processing a queued create/join command.
 		case Finished:
+			slog.Info("Game finished", "stage", d.journal.game.stage.diagnosticName())
 			return d.emit(ctx, nil, false, nil)
 		case NeedsInput, Waiting:
 			if err := d.emit(ctx, step.Choice, false, nil); err != nil {
@@ -355,6 +364,7 @@ func (d *Driver) emit(ctx context.Context, choice *Choice, shuffling bool, err e
 	}
 }
 func (d *Driver) reportError(ctx context.Context, err error) error {
+	slog.Error("Game operation failed", "error", err)
 	_ = d.emit(ctx, nil, false, err)
 	return err
 }
@@ -363,6 +373,10 @@ func (d *Driver) commit(ctx context.Context, e Event) error {
 	if err := d.journal.append(ctx, e); err != nil {
 		return err
 	}
+	// Only event metadata belongs in diagnostics; e itself can hold secrets.
+	slog.Info("Game event saved", "event", e.Kind.diagnosticName(), "sequence", e.Sequence,
+		"from_stage", prior.diagnosticName(), "stage", d.journal.game.stage.diagnosticName())
+	d.lastLoggedEffect = 0
 	if e.Kind == SubmissionAttempted && e.Receipt.TxID == nil {
 		d.recovering = true
 		d.retried = false

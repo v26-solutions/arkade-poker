@@ -55,6 +55,15 @@ and returns to Create/Join with the wallet still loaded. Each player must abort
 on their own device and use a new invitation. If funding has already begun,
 abort retains the saved game so it can be resumed.
 
+Press **L** (or **l**) to copy diagnostic logs in either the terminal or browser.
+The shortcut works during waits and in confirmation dialogs; text fields keep
+both letters as normal input. Copy success or failure appears above the wallet.
+Logs cover the current run and retain up to 2,048 recent entries (1 MiB), with
+private-key fields, key encodings and mnemonic phrases redacted before retention.
+Long hexadecimal values are conservatively redacted too. The browser also writes
+the same redacted entries to its developer console. Diagnostic logs exclude
+private recovery records and reset when the application restarts.
+
 ## How it works
 
 ### Game configuration

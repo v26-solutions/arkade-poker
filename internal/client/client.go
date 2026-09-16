@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -76,6 +77,7 @@ type Client struct {
 func New(config Config) *Client { return &Client{config: config} }
 
 func (c *Client) Close() {
+	slog.Info("Closing wallet session")
 	c.mu.Lock()
 	c.closed = true
 	s := c.session
@@ -101,7 +103,15 @@ func (c *Client) AbortSetup(ctx context.Context, public [32]byte) (*Session, err
 	return c.clearSavedGame(ctx, public, true)
 }
 
-func (c *Client) clearSavedGame(ctx context.Context, public [32]byte, setupOnly bool) (*Session, error) {
+func (c *Client) clearSavedGame(ctx context.Context, public [32]byte, setupOnly bool) (_ *Session, err error) {
+	slog.Info("Clearing saved game", "setup_only", setupOnly)
+	defer func() {
+		if err != nil {
+			slog.Error("Clear saved game failed", "setup_only", setupOnly, "error", err)
+		} else {
+			slog.Info("Saved game cleared", "setup_only", setupOnly)
+		}
+	}()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
@@ -157,6 +167,12 @@ func (c *Client) Open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 
 // open requires c.mu; ownership transfers only once startup succeeds.
 func (c *Client) open(ctx context.Context, key *wallet.Key) (_ *Session, err error) {
+	slog.Info("Opening wallet session")
+	defer func() {
+		if err != nil {
+			slog.Error("Wallet session failed", "error", err)
+		}
+	}()
 	if key == nil || key.PublicKey() == [32]byte{} || c.config.Open == nil || c.config.Connect == nil {
 		return nil, wallet.ErrKey
 	}
@@ -165,6 +181,7 @@ func (c *Client) open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 		return nil, err
 	}
 	var connections Connections
+	slog.Info("Wallet storage opened")
 	defer func() {
 		if err != nil {
 			if connections.Transport != nil {
@@ -177,6 +194,8 @@ func (c *Client) open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 		}
 	}()
 	cfg := c.config.Game
+	slog.Info("Connecting wallet services", "arkd", cfg.ArkdURL, "emulator", cfg.EmulatorURL,
+		"indexer", cfg.IndexerURL, "delegator", cfg.DelegatorURL)
 	discovery, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	connections, err = c.config.Connect(discovery, cfg)
@@ -191,6 +210,8 @@ func (c *Client) open(ctx context.Context, key *wallet.Key) (_ *Session, err err
 	if err != nil {
 		return nil, err
 	}
+	slog.Info("Wallet connected", "network", cfg.Wallet.Network)
+	slog.Info("Loading saved game")
 	log, err := currentSession(ctx, base, cfg)
 	if err != nil {
 		return nil, err
@@ -301,6 +322,7 @@ func (c *Client) run(ctx context.Context, s *Session, key *wallet.Key, base stor
 			if err == nil {
 				err = game.ErrDriverStopped
 			}
+			slog.Error("Game stopped; saved work retained", "error", err)
 			select {
 			case updates <- game.Update{Err: err}:
 			case <-ctx.Done():
@@ -311,6 +333,7 @@ func (c *Client) run(ctx context.Context, s *Session, key *wallet.Key, base stor
 		}
 		select {
 		case <-s.NewGame:
+			slog.Info("Starting next game")
 		case <-ctx.Done():
 			return
 		}

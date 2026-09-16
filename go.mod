@@ -21,6 +21,7 @@ require (
 	github.com/coder/websocket v1.8.14
 	github.com/evanw/esbuild v0.28.2
 	github.com/meshapi/grpc-api-gateway v0.1.0
+	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.82.1
 )
 
@@ -59,7 +60,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

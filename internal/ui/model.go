@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"arkade-poker/go/internal/appconfig"
@@ -28,6 +29,7 @@ type Host struct {
 	RelayURL        string
 	DefaultTerms    game.Terms
 	CopyText        func(string) error
+	Logs            func() string
 }
 
 type modal uint8
@@ -88,6 +90,9 @@ type Model struct {
 	now               time.Time
 	copyNoticeUntil   uint64
 	copyNotice        string
+	copyingLogs       bool
+	logNotice         string
+	logNoticeUntil    uint64
 	session           *client.Session
 	snapshot          game.Snapshot
 	fields            []textinput.Model
@@ -206,8 +211,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case networkMsg:
 		m.network = msg.network
 		if msg.err != nil {
+			slog.Warn("Network discovery failed", "error", msg.err)
 			m.network = "unavailable"
+		} else {
+			slog.Info("Network discovered", "network", msg.network)
 		}
+	case logsCopiedMsg:
+		m.copyingLogs = false
+		m.logNotice = "Logs copied"
+		if msg.err != nil {
+			m.logNotice = "Could not copy logs to the clipboard"
+			slog.Warn("Log clipboard copy failed", "error", msg.err)
+		}
+		m.logNoticeUntil = m.frame + 50
 	case copiedMsg:
 		if msg.err != nil {
 			m.errorText = "Could not copy the address to the clipboard."
@@ -219,6 +235,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case connectedMsg:
 		m.connecting = false
 		if msg.err != nil {
+			slog.Error("Wallet connection failed", "error", msg.err)
 			m.errorText = "Wallet connection failed: " + msg.err.Error()
 			m.status = "Add a funded wallet to begin"
 			m.key.Destroy()
@@ -323,6 +340,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tea.KeyPressMsg:
+		if m.logShortcut(msg) {
+			return m, m.copyLogs()
+		}
 		key := msg.String()
 		if key == "ctrl+c" {
 			if !m.host.Browser && m.modal != exitModal {
@@ -383,6 +403,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.modal == walletModal && key == "enter" {
 			key, err := wallet.ParseKey(m.input.Value(), m.network)
 			if err != nil {
+				slog.Warn("Wallet import rejected", "error", err)
 				m.errorText = err.Error()
 				if errors.Is(err, wallet.ErrKeyNetwork) {
 					return m, m.discoverNetwork()
@@ -390,6 +411,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.key = key
+			slog.Info("Wallet imported")
 			m.input.Reset()
 			m.input.Blur()
 			m.modal = noModal

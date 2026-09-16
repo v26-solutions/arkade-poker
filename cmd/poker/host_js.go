@@ -47,7 +47,7 @@ func newHost() (ui.Host, func(), error) {
 		}, Clear: func(ctx context.Context, public [32]byte) error {
 			return storage.Clear(ctx, browserConfig("storage", "default"), public)
 		}, Connect: connectServices})
-	h := ui.Host{Browser: true, CopyText: clipboard.WriteAll, ConnectSession: runtime.Open, ClearSavedGame: runtime.ClearSavedGame, RelayURL: settings.RelayURL, DefaultTerms: settings.Terms}
+	h := ui.Host{Browser: true, CopyText: clipboard.WriteAll, ConnectSession: runtime.Open, ClearSavedGame: runtime.ClearSavedGame, AbortSetup: runtime.AbortSetup, RelayURL: settings.RelayURL, DefaultTerms: settings.Terms}
 	h.DiscoverNetwork = func(ctx context.Context) (string, error) {
 		return discoverNetwork(ctx, settings.ArkdURL)
 	}

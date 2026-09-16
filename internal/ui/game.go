@@ -101,8 +101,12 @@ func allowed(c *game.Choice, kind game.InputKind) bool {
 }
 
 func (m *Model) actions() []action {
+	var setupActions []action
+	if m.canAbortSetup() {
+		setupActions = append(setupActions, action{key: "b", label: "Abort setup"})
+	}
 	if m.session == nil || m.busy || m.stopped || m.shuffling {
-		return nil
+		return setupActions
 	}
 	s, c := m.snapshot, m.snapshot.Choice
 	if s.Outcome != nil {
@@ -142,7 +146,7 @@ func (m *Model) actions() []action {
 	if allowed(c, game.ClaimTimeout) {
 		a = append(a, action{"d", "Claim timeout", game.Input{Kind: game.ClaimTimeout}})
 	}
-	return a
+	return append(a, setupActions...)
 }
 
 func (m *Model) submit(input game.Input, fresh bool) tea.Cmd {
@@ -218,6 +222,8 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 			if m.canClearGame() {
 				m.openClearGame()
 			}
+		case "b":
+			m.openAbortSetup()
 		case "q":
 			if !m.host.Browser {
 				m.previousModal, m.modal, m.exitConfirm = menuModal, exitModal, false
@@ -290,6 +296,9 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 	if len(a) == 0 {
 		return nil, false
 	}
+	if m.selected >= len(a) {
+		m.selected = 0
+	}
 	switch key {
 	case "left", "up", "shift+tab":
 		m.selected = (m.selected + len(a) - 1) % len(a)
@@ -313,6 +322,9 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 			return m.submit(action.input, false), true
 		}
 		switch key {
+		case "b":
+			m.openAbortSetup()
+			return nil, true
 		case "c":
 			t := m.host.DefaultTerms
 			return m.openForm(createModal, strconv.FormatInt(t.Stake, 10), strconv.FormatInt(t.Bond, 10),

@@ -49,6 +49,12 @@ The terminal and browser clients share the same Go game engine, with the browser
 running it as WebAssembly. Game progress is saved locally so a session can be
 resumed with the same wallet, network and services.
 
+If setup gets stuck before funding, click **Abort setup** or press **B**, then
+confirm. This stops setup, deletes the wallet's saved game files on this device,
+and returns to Create/Join with the wallet still loaded. Each player must abort
+on their own device and use a new invitation. If funding has already begun,
+abort retains the saved game so it can be resumed.
+
 ## How it works
 
 ### Game configuration

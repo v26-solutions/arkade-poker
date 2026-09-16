@@ -127,7 +127,7 @@ func (m *Model) layout() *screen {
 	f.put(0, 0, textStyle.Render(fit("", w, h, false)))
 	if w < 76 || h < 30 {
 		f.put(0, 0, textStyle.Render(fit(fmt.Sprintf("ARKADE POKER\n\nResize to at least 76 × 30\nCurrent: %d × %d\n\nYour input is preserved.", w, h), w, h, true)))
-		if m.modal == exitModal || m.modal == clearGameModal {
+		if m.modal == exitModal || m.modal == clearGameModal || m.modal == abortSetupModal {
 			m.dialog(f)
 		}
 		return f

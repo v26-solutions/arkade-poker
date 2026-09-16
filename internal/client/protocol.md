@@ -25,6 +25,13 @@ or service calls when no wallet was loaded. It does not refund funds or settle a
 closing clients/store and destroying the imported key. No key ingress text is
 ever an argument to storage or a service operation.
 
+`AbortSetup` uses the same stop/join and key transfer, but checks the durable
+current segment before clearing. Only setup events are allowed; any prepared,
+signed, submitted or observed funding/spend record prevents deletion. The check
+runs after the worker stops, so a stale UI cannot erase funding recovery data.
+An unreadable log also prevents deletion. This check only opens storage and
+decodes records; it never runs recovery or contacts transaction services.
+
 After service connection and admitted replay, a separate wallet watcher attaches
 to the default receive script before querying the balance. Change events trigger
 another query; a stream gap or query failure marks the display unavailable and

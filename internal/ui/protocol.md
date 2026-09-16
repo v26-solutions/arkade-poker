@@ -83,6 +83,14 @@ duplicate clear requests are disabled until completion; errors keep the clear
 option available for retry without dropping a loaded wallet. Results from the old session cannot repopulate the
 screen after clear or after another import. There is no automatic deletion.
 
+Pre-funding setup also offers `B: Abort setup` in the action row and menu for
+either player, including during local preparation, shuffling and opponent waits.
+Its keyboard/mouse confirmation defaults to Cancel. The host stops and joins
+the worker, then checks the durable current session before deleting wallet
+history. Funding records prevent deletion even when the UI had a stale setup
+snapshot. Success returns to Create/Join with the wallet loaded; the opponent
+must abort their own local setup and exchange a new invitation.
+
 The header receive address copies on click without a Y shortcut or copy hint.
 At the right of the wallet panel, the balance uses grouped whole sats (for example `123,456 sats`).
 Balance updates have their own waiting command and never mutate game state.

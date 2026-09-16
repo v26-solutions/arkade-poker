@@ -91,6 +91,17 @@ func (c *Client) Close() {
 // retains an already imported key and opens a fresh session without new ingress.
 // Without a loaded wallet it only clears storage. It never submits transactions.
 func (c *Client) ClearSavedGame(ctx context.Context, public [32]byte) (*Session, error) {
+	return c.clearSavedGame(ctx, public, false)
+}
+
+// AbortSetup cancels setup work and deletes its saved history, keeping the
+// imported wallet. Check the durable log after joining the worker: the UI may
+// still show setup while the driver has already started funding the covenant.
+func (c *Client) AbortSetup(ctx context.Context, public [32]byte) (*Session, error) {
+	return c.clearSavedGame(ctx, public, true)
+}
+
+func (c *Client) clearSavedGame(ctx context.Context, public [32]byte, setupOnly bool) (*Session, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
@@ -110,6 +121,11 @@ func (c *Client) ClearSavedGame(ctx context.Context, public [32]byte) (*Session,
 	}
 	c.session.Close()
 	c.session = nil
+	if setupOnly {
+		if err := c.checkUnfundedSetup(ctx, public); err != nil {
+			return nil, err
+		}
+	}
 	if err := c.config.Clear(ctx, public); err != nil {
 		return nil, err
 	}

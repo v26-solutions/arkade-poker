@@ -27,6 +27,8 @@ func (m *Model) modalBody() string {
 			walletStatus = "\nYour wallet will stay loaded."
 		}
 		return fmt.Sprintf("CLEAR SAVED GAME?\n\nRemove all saved games for wallet %x…%x\nfrom this device?\n\nThis deletes recovery data and does not refund funds in a hand.%s\n\n%s\n\n←/→: Select    Enter: Activate    Escape: Cancel", m.clearPublic[:4], m.clearPublic[28:], walletStatus, buttons)
+	case abortSetupModal:
+		return "ABORT SETUP?\n\nStop setup and delete this wallet's saved game files\nfrom this device. Your wallet will stay loaded.\n\nYour opponent must abort on their device too.\nCreate a new invitation to try again.\n\nIf covenant funding has begun, the saved game is retained.\n\n←/→: Select    Enter: Activate    Escape: Cancel"
 	case exitModal:
 		buttons := "[ Cancel ]    Confirm exit"
 		if m.exitConfirm {

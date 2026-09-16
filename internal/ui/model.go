@@ -24,6 +24,7 @@ type Host struct {
 	ConnectWallet   func(context.Context, *wallet.Key) (wallet.Receive, error)
 	ConnectSession  func(context.Context, *wallet.Key) (*client.Session, error)
 	ClearSavedGame  func(context.Context, [32]byte) (*client.Session, error)
+	AbortSetup      func(context.Context, [32]byte) (*client.Session, error)
 	RelayURL        string
 	DefaultTerms    game.Terms
 	CopyText        func(string) error
@@ -44,6 +45,7 @@ const (
 	allInModal
 	payoutModal
 	menuModal
+	abortSetupModal
 )
 
 type tickMsg time.Time
@@ -237,7 +239,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.errorText = "Could not clear saved game: " + msg.err.Error()
 			m.status = "Clear failed. Retry to continue."
-		} else if msg.session != nil {
+			if msg.abort {
+				m.errorText = "Could not abort setup: " + msg.err.Error()
+				m.status = "Setup stopped. Saved work retained; restart to resume."
+				m.stopped = true
+			}
+			return m, nil
+		}
+		m.snapshot = game.Snapshot{}
+		if msg.session != nil {
 			m.session = msg.session
 			m.receive = msg.session.Receive
 			return m, tea.Batch(m.waitUpdate(), m.waitBalance())
@@ -279,6 +289,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "clear":
 			m.openClearGame()
 			return m, nil
+		case "abort":
+			m.openAbortSetup()
+			return m, nil
 		case "cancel":
 			return m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 		case "confirm":
@@ -287,6 +300,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.modal == clearGameModal {
 				return m, m.clearGame()
+			}
+			if m.modal == abortSetupModal {
+				return m, m.abortSetup()
 			}
 			return m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 		case "menu-exit":
@@ -317,7 +333,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.clearing && m.modal != exitModal {
 			return m, nil
 		}
-		if m.modal == clearGameModal {
+		if m.modal == clearGameModal || m.modal == abortSetupModal {
 			switch key {
 			case "tab", "left", "right":
 				m.clearConfirm = !m.clearConfirm
@@ -325,6 +341,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.modal = noModal
 			case "enter":
 				if m.clearConfirm {
+					if m.modal == abortSetupModal {
+						return m, m.abortSetup()
+					}
 					return m, m.clearGame()
 				}
 				m.modal = noModal

@@ -71,6 +71,8 @@ func (m *Model) dialog(f *screen) {
 			primary = "Confirm clear"
 			body = strings.Split(body, "\n\n[ Cancel ]")[0]
 			body = strings.Split(body, "\n\nCancel")[0]
+		case abortSetupModal:
+			primary = "Confirm abort"
 		}
 	}
 	w := min(82, f.w-4)
@@ -123,7 +125,7 @@ func (m *Model) dialog(f *screen) {
 			cancel = "[ Cancel ]"
 		}
 	}
-	if m.modal == clearGameModal {
+	if m.modal == clearGameModal || m.modal == abortSetupModal {
 		selected = m.clearConfirm
 		cancel = "Cancel"
 		if !selected {
@@ -138,6 +140,9 @@ func (m *Model) dialog(f *screen) {
 	}
 	if m.modal == menuModal {
 		buttons = []screenButton{{"confirm", primary, true}}
+		if m.canAbortSetup() {
+			buttons = append(buttons, screenButton{"abort", "[B] ABORT SETUP", false})
+		}
 		if m.canClearGame() {
 			buttons = append(buttons, screenButton{"clear", "[X] CLEAR SAVED GAME", false})
 		}

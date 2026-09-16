@@ -47,7 +47,7 @@ func newHost() (ui.Host, func(), error) {
 			return storage.Clear(ctx, env("POKER_DATA_DIR", filepath.Join(directory, "arkade-poker-go")), public)
 		}, Connect: connectServices}
 	runtime := client.New(cfg)
-	h := ui.Host{CopyText: clipboard.WriteAll, ConnectSession: runtime.Open, ClearSavedGame: runtime.ClearSavedGame, RelayURL: settings.RelayURL, DefaultTerms: settings.Terms}
+	h := ui.Host{CopyText: clipboard.WriteAll, ConnectSession: runtime.Open, ClearSavedGame: runtime.ClearSavedGame, AbortSetup: runtime.AbortSetup, RelayURL: settings.RelayURL, DefaultTerms: settings.Terms}
 	h.DiscoverNetwork = func(ctx context.Context) (string, error) {
 		return discoverNetwork(ctx, settings.ArkdURL)
 	}

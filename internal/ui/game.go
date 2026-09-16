@@ -127,7 +127,11 @@ func (m *Model) actions() []action {
 		a = append(a, action{key: "t", label: "Invitation"})
 	}
 	if allowed(c, game.Concede) {
-		a = append(a, action{"f", "Fold", game.Input{Kind: game.Concede}})
+		key, label := "f", "Fold"
+		if allowed(c, game.RevealShowdown) {
+			key, label = "m", "Muck"
+		}
+		a = append(a, action{key, label, game.Input{Kind: game.Concede}})
 	}
 	if allowed(c, game.Bet) {
 		if c.CanCheck {

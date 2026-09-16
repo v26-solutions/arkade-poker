@@ -170,11 +170,11 @@ func (g *Game) PrepareShuffle(ctx context.Context, entropy io.Reader, now func()
 		if err != nil {
 			return Event{}, err
 		}
-		if uint64(at) > math.MaxUint64-covenant.DeadlineInterval {
+		if uint64(at) > math.MaxUint64-initialFundingTimeout {
 			return Event{}, ErrDeadline
 		}
 		m.Kind = FinalShuffle
-		m.InitialDeadline = at + covenant.DeadlineInterval
+		m.InitialDeadline = at + initialFundingTimeout
 	}
 	e := g.NewEvent(MessagePrepared)
 	e.Message = &m

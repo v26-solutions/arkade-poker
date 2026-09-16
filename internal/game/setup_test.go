@@ -160,8 +160,8 @@ func completeSetup(t *testing.T) pairFixture {
 		if clockCalls != 1 {
 			t.Fatal("final deadline observation")
 		}
-		if final.Message.InitialDeadline != 1060 {
-			t.Fatalf("initial deadline: got %d, want 1060", final.Message.InitialDeadline)
+		if final.Message.InitialDeadline != 1300 {
+			t.Fatalf("initial deadline: got %d, want 1300", final.Message.InitialDeadline)
 		}
 		applyRecord(t, g1, final, &l1)
 		step, err := g1.Decide(Input{Kind: Progress})
@@ -316,7 +316,7 @@ func TestSetupRejectionsAreAtomic(t *testing.T) {
 		}},
 		{"wrong final sequence", 1, final, func(e *Event) { e.Message.Sequence = 0 }},
 		{"early final deadline", 1, final, func(e *Event) { e.Message.InitialDeadline = 1029 }},
-		{"late final deadline", 1, final, func(e *Event) { e.Message.InitialDeadline = 1091 }},
+		{"late final deadline", 1, final, func(e *Event) { e.Message.InitialDeadline = 1331 }},
 		{"overflow observation", 1, final, func(e *Event) { e.ObservedAt = math.MaxUint64 }},
 	}
 	for _, tt := range tests {
@@ -428,12 +428,31 @@ func TestSetupCancellationAndEntropy(t *testing.T) {
 	if _, s, err := CreateInvitation(context.Background(), failEntropy{}, testConfig(1), testTerms, "ws://host"); !errors.Is(err, io.ErrUnexpectedEOF) || s != nil {
 		t.Fatal("entropy failure", err)
 	}
+}
+
+func TestInitialDeadlineWindow(t *testing.T) {
 	for _, tt := range []struct {
+		name          string
 		now, deadline uint64
 		ok            bool
-	}{{1000, 1030, true}, {1000, 1060, true}, {1000, 1090, true}, {1000, 1029, false}, {1000, 1091, false}, {1000, 1300, false}, {math.MaxUint64 - 90, math.MaxUint64, true}, {math.MaxUint64 - 89, math.MaxUint64, false}} {
-		if (deadlineWindow(covenant.UnixSeconds(tt.now), covenant.UnixSeconds(tt.deadline)) == nil) != tt.ok {
-			t.Fatal("deadline window")
-		}
+	}{
+		{"new setup", 1000, 1300, true},
+		{"two minutes elapsed", 1120, 1300, true},
+		{"last safe funding second", 1270, 1300, true},
+		{"insufficient funding margin", 1271, 1300, false},
+		{"expired", 1300, 1300, false},
+		{"past deadline", 1301, 1300, false},
+		{"clock skew limit", 970, 1300, true},
+		{"excessive clock skew", 969, 1300, false},
+		{"distant deadline", 1000, 1600, false},
+		{"maximum timestamp", math.MaxUint64 - 330, math.MaxUint64, true},
+		{"overflow", math.MaxUint64 - 329, math.MaxUint64, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := deadlineWindow(covenant.UnixSeconds(tt.now), covenant.UnixSeconds(tt.deadline))
+			if tt.ok && err != nil || !tt.ok && !errors.Is(err, ErrDeadline) {
+				t.Fatalf("deadlineWindow(%d, %d) = %v, want admissible=%t", tt.now, tt.deadline, err, tt.ok)
+			}
+		})
 	}
 }

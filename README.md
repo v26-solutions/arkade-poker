@@ -96,6 +96,11 @@ The ownership and shuffle proofs are bound to this session and its participants.
 The relay carries the setup messages; each client verifies them and derives the
 covenant itself.
 
+The initial covenant deadline is five minutes after Player 1 generates the final
+shuffle proof. Funding requires at least 30 seconds remaining, leaving about
+four and a half minutes for final verification, relay delivery and both funding
+steps. Live actions continue to advance the covenant deadline by 60 seconds.
+
 ### Verifiable shuffling and card reveals
 
 The shuffle implementation was ported to Go from

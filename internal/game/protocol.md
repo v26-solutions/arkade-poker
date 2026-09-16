@@ -44,8 +44,11 @@ Ownership proofs bind the canonical invitation, role, transport identity,
 wallet signing key and exact payout script. Shuffle contexts bind the canonical
 invitation and both complete ordered key offers, with different initial/final
 stage bytes. P1 chooses the initial deadline **after** final proof generation as
-recorded time + 60, checked for overflow. P2 admits the inclusive [now+30,
-now+90] window with checked additions. The final verified deck maps positions
+recorded time + 300, checked for overflow. P2 admits the inclusive [now+30,
+now+330] window with checked additions: at least 30 seconds must remain for
+funding, and the upper bound allows 30 seconds of clock skew. The fixed lower
+bound leaves up to 270 seconds for verification, delivery and both funding
+transactions. The final verified deck maps positions
 0,1 to P1 holes; 2,3 to P2 holes; 4,5,6 to flop; 7 to turn; 8 to river. Both sides
 call the existing covenant derivation; no separate agreement message is sent.
 No private cards become visible during setup.
@@ -143,7 +146,8 @@ extension and emulator packets, admits the selected script/tree, preserves every
 previous share and checks new DLEQ proofs in contract/slot context. Cumulative
 wagers, check/call/raise rules, short raises at the cap, contributions, change
 and payout ordering follow Rust. Deadlines advance by 60 seconds per live
-transition, using the same interval as setup and covenant scripts. A wallet/indexer
+transition, as enforced by the covenant scripts; setup uses the separate
+five-minute initial funding timeout. A wallet/indexer
 accepted result provides service acceptance; constructing a transaction or
 signing it does not.
 

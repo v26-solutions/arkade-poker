@@ -34,7 +34,8 @@ type PerPlayer[T any] struct {
 type ContractID [32]byte
 type UnixSeconds uint64
 
-// DeadlineInterval is the initial timeout and each live deadline increment, in seconds.
+// DeadlineInterval is each live deadline increment, in seconds. The initial
+// deadline is negotiated during setup and supplied in Params.
 const DeadlineInterval = 60
 
 type Street uint8

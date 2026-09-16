@@ -95,9 +95,12 @@ func sameMessage(a, b Message) bool {
 	return e1 == nil && e2 == nil && bytes.Equal(x, y)
 }
 func deadlineWindow(now, deadline covenant.UnixSeconds) error {
-	const tolerance = 30
-	const minimum = covenant.DeadlineInterval - tolerance
-	const maximum = covenant.DeadlineInterval + tolerance
+	// Keep a fixed safety margin before funding. Deriving the minimum from the
+	// setup timeout would leave only 30 seconds for delivery and funding again.
+	// The upper bound allows 30 seconds of clock skew without accepting an
+	// arbitrarily distant deadline.
+	const minimum = 30
+	const maximum = initialFundingTimeout + 30
 	if uint64(now) > math.MaxUint64-maximum || deadline < now+minimum || deadline > now+maximum {
 		return ErrDeadline
 	}

@@ -21,6 +21,10 @@ import (
 type SessionID [32]byte
 type Terms struct{ Stake, Bond, MinBet, MaxWager int64 }
 
+// Setup must allow time for final-proof verification, relay delivery and both
+// funding transactions. Live actions keep covenant.DeadlineInterval increments.
+const initialFundingTimeout = 5 * 60
+
 // Invitation commits exact relay bytes, shared service policy, offered terms and
 // a random bearer capability. It contains neither wallet nor session secrets.
 type Invitation struct {

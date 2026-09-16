@@ -41,3 +41,20 @@ func (m *Model) openRaise() tea.Cmd {
 	}
 	return m.openForm(raiseModal, strconv.FormatInt(r.min, 10))
 }
+
+func (m *Model) adjustRaise(direction int64) {
+	r, ok := m.raiseRange()
+	step := m.snapshot.Terms.MinBet
+	if !ok || step <= 0 || len(m.fields) == 0 {
+		return
+	}
+	n, err := amount(m.fields[0].Value())
+	if err != nil {
+		n = r.min
+	} else {
+		n = max(r.min, min(r.max, n+direction*step))
+	}
+	m.fields[0].SetValue(strconv.FormatInt(n, 10))
+	m.fields[0].CursorEnd()
+	m.errorText = ""
+}

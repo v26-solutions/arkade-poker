@@ -92,8 +92,8 @@ func (m *Model) modalBody() string {
 			preview = fmt.Sprintf("Call %s + raise %s = add %s sats\nYour total bet after this move: %s sats",
 				formatSats(r.theirs-r.mine), formatSats(n), formatSats(target-r.mine), formatSats(target))
 		}
-		return fmt.Sprintf("RAISE BY\n\nAmount above opponent's bet, in sats.\nMinimum %s   Maximum %s\n\n%s\n\n%s\n\nEnter: Raise    Escape: Cancel",
-			formatSats(r.min), formatSats(r.max), m.fields[0].View(), preview)
+		return fmt.Sprintf("RAISE BY\n\nAmount above opponent's bet, in sats.\nMinimum %s   Maximum %s\n\n%s\nUp/Down: Adjust by %s sats\n\n%s\n\nEnter: Raise    Escape: Cancel",
+			formatSats(r.min), formatSats(r.max), m.fields[0].View(), formatSats(m.snapshot.Terms.MinBet), preview)
 	}
 	return ""
 }

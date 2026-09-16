@@ -250,6 +250,14 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 		return nil, true
 	}
 	if m.modal == createModal || m.modal == joinModal || m.modal == raiseModal {
+		if m.modal == raiseModal && (key == "up" || key == "down") {
+			direction := int64(1)
+			if key == "down" {
+				direction = -1
+			}
+			m.adjustRaise(direction)
+			return nil, true
+		}
 		if key == "tab" || key == "shift+tab" || key == "up" || key == "down" {
 			step := 1
 			if key == "shift+tab" || key == "up" {

@@ -82,6 +82,66 @@ func TestRaiseIncrementRejectsInvalidAmounts(t *testing.T) {
 	}
 }
 
+func TestRaiseArrowKeys(t *testing.T) {
+	for _, browser := range []bool{false, true} {
+		for _, test := range []struct {
+			name, input, want string
+			key               rune
+		}{
+			{"increase by minimum bet", "200", "300", tea.KeyUp},
+			{"decrease by minimum bet", "400", "300", tea.KeyDown},
+			{"custom amount", "325", "425", tea.KeyUp},
+			{"minimum", "200", "200", tea.KeyDown},
+			{"maximum", "1400", "1400", tea.KeyUp},
+			{"clamp decrease", "250", "200", tea.KeyDown},
+			{"clamp increase", "1350", "1400", tea.KeyUp},
+			{"below range", "1", "200", tea.KeyUp},
+			{"above range", "2000", "1400", tea.KeyDown},
+			{"empty", "", "200", tea.KeyUp},
+			{"invalid", "1.5", "200", tea.KeyDown},
+			{"overflow", "9223372036854775807", "200", tea.KeyUp},
+		} {
+			t.Run(fmt.Sprintf("browser=%t/%s", browser, test.name), func(t *testing.T) {
+				m := playing() // Minimum bet is 100; legal raise is 200..1400.
+				m.host.Browser = browser
+				press(m, 'r', 0)
+				m.fields[0].SetValue(test.input)
+				m.errorText = "Raise amount must be within the displayed range."
+				if cmd := press(m, test.key, 0); cmd != nil || m.busy || m.modal != raiseModal {
+					t.Fatal("arrow key submitted or closed the form")
+				}
+				if got := m.fields[0].Value(); got != test.want {
+					t.Fatalf("amount = %s, want %s", got, test.want)
+				}
+				if !m.fields[0].Focused() || m.fields[0].Position() != len(test.want) || m.errorText != "" {
+					t.Fatal("adjustment lost input focus/cursor or retained stale error")
+				}
+				n, _ := amount(test.want)
+				view := ansi.Strip(m.View().Content)
+				if !strings.Contains(view, "Up/Down: Adjust by 100 sats") || !strings.Contains(view, "Call 200 + raise "+formatSats(n)) {
+					t.Fatal("arrow hint or updated funding preview missing")
+				}
+				got := submitted(t, m, press(m, tea.KeyEnter, 0))
+				if got.Kind != game.Bet || got.Bet.Kind != covenant.RaiseTo || got.Bet.Amount != 600+n {
+					t.Fatalf("wrong cumulative target: %+v", got)
+				}
+			})
+		}
+	}
+}
+
+func TestRaiseArrowKeysShortAllIn(t *testing.T) {
+	m := playing()
+	m.snapshot.Choice.MinRaiseTo, m.snapshot.Choice.MaxRaiseTo = 650, 650
+	press(m, 'r', 0)
+	for _, key := range []rune{tea.KeyUp, tea.KeyDown} {
+		press(m, key, 0)
+		if m.fields[0].Value() != "50" {
+			t.Fatal("arrow key changed the only legal short all-in amount")
+		}
+	}
+}
+
 func TestRaiseFormClosesWhenPositionChanges(t *testing.T) {
 	m := playing()
 	press(m, 'r', 0)
@@ -93,6 +153,11 @@ func TestRaiseFormClosesWhenPositionChanges(t *testing.T) {
 	m.driverUpdate(driverMsg{update: game.Update{Snapshot: next}})
 	if cmd := press(m, tea.KeyEnter, 0); cmd != nil || m.modal != raiseModal {
 		t.Fatal("unavailable choice submitted or cleared the form")
+	}
+	press(m, tea.KeyUp, 0)
+	press(m, tea.KeyDown, 0)
+	if m.fields[0].Value() != "600" {
+		t.Fatal("arrow keys changed the amount while choices were unavailable")
 	}
 	next.Choice = playing().snapshot.Choice
 	m.driverUpdate(driverMsg{update: game.Update{Snapshot: next}})

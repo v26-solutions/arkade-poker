@@ -85,7 +85,10 @@ Create has labels and inputs in
 consistent side-by-side columns inside one centered form block. Join decodes an invitation,
 shows its terms and relay as aligned, read-only rows without input controls, then
 asks to deposit the stake plus bond and join on Enter. Long relay URLs are
-shortened with an ellipsis to keep the confirmation visible. The entire encoded invitation and
+shortened with an ellipsis to keep the confirmation visible. The session waiting screen
+shows the invitation inline with its terms and status. `Y: Copy invitation` copies
+it directly without opening a dialog, so the table appears as soon as play begins.
+The entire encoded invitation and
 receive address are copied; only their display is shortened/wrapped. Long valid
 invitations preserve their entire payload and keep review/copy controls visible. The payout dialog shows the accepted payout transaction and local payout amount. A stopped
 driver retains its table and log, with no new-game control.

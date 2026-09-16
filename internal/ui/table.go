@@ -13,6 +13,23 @@ func termsText(t game.Terms) string {
 	return fmt.Sprintf("STAKE %s SATS   /   BOND %s SATS\nMINIMUM BET %s   /   MAXIMUM WAGER %s", formatSats(t.Stake), formatSats(t.Bond), formatSats(t.MinBet), formatSats(t.MaxWager))
 }
 
+func (m *Model) sessionBody(width, height int) string {
+	heading := "SESSION READY\n\n" + termsText(m.snapshot.Terms) + "\n\nShare this invitation with your opponent."
+	status := clean(m.status)
+	preview := "Invitation unavailable"
+	if token, err := game.EncodeInvitation(*m.snapshot.Invitation); err == nil {
+		rows := strings.Split(wrapToken(token, max(1, min(80, width-4))), "\n")
+		// Reserve the terms, sharing hint, status and the two blank separators.
+		limit := max(1, height-lipgloss.Height(heading)-lipgloss.Height(status)-2)
+		if len(rows) > limit {
+			rows = rows[:limit]
+			rows[limit-1] = "… (copy for the complete invitation)"
+		}
+		preview = strings.Join(rows, "\n")
+	}
+	return heading + "\n\n" + preview + "\n\n" + status
+}
+
 func (m *Model) modalBody() string {
 	switch m.modal {
 	case walletModal:
@@ -66,21 +83,6 @@ func (m *Model) modalBody() string {
 		}
 		params := lipgloss.JoinVertical(lipgloss.Left, rows...)
 		return "JOIN THIS GAME?\n\n" + params + fmt.Sprintf("\n\nPress Enter to deposit %s sats and join\nEscape to cancel", formatSats(t.Stake+t.Bond))
-	case tokenModal:
-		if m.snapshot.Invitation == nil {
-			return "Invitation unavailable"
-		}
-		token, err := game.EncodeInvitation(*m.snapshot.Invitation)
-		if err != nil {
-			return "Invitation unavailable"
-		}
-		rows := strings.Split(wrapToken(token, max(10, min(68, m.width-12))), "\n")
-		limit := max(3, m.height-22)
-		if len(rows) > limit {
-			rows = rows[:limit]
-			rows[limit-1] = "… (copy for the complete invitation)"
-		}
-		return "SESSION INVITATION\n\nShare this invitation with your opponent.\n\n" + strings.Join(rows, "\n") + "\n\nY / Enter: Copy invitation    Escape: Close"
 	case raiseModal:
 		r, ok := m.raiseRange()
 		if !ok {

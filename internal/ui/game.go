@@ -124,7 +124,7 @@ func (m *Model) actions() []action {
 		a = append(a, action{key: "j", label: "Join session"})
 	}
 	if s.Invitation != nil && s.State == nil {
-		a = append(a, action{key: "t", label: "Invitation"})
+		a = append(a, action{key: "y", label: "Copy invitation"})
 	}
 	if allowed(c, game.Concede) {
 		key, label := "f", "Fold"
@@ -279,21 +279,6 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 		}
 		return nil, true
 	}
-	if m.modal == tokenModal {
-		if key == "y" || key == "enter" {
-			inv := m.snapshot.Invitation
-			if inv == nil {
-				return nil, true
-			}
-			token, err := game.EncodeInvitation(*inv)
-			if err != nil {
-				m.errorText = "Invitation unavailable"
-				return nil, true
-			}
-			return m.copyText(token, "Invitation"), true
-		}
-		return nil, true
-	}
 	if m.modal != noModal {
 		return nil, false
 	}
@@ -336,8 +321,13 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 				strconv.FormatInt(t.MinBet, 10), strconv.FormatInt(t.MaxWager, 10), m.host.RelayURL), true
 		case "j":
 			return m.openForm(joinModal, ""), true
-		case "t":
-			return m.openForm(tokenModal), true
+		case "y":
+			token, err := game.EncodeInvitation(*m.snapshot.Invitation)
+			if err != nil {
+				m.errorText = "Invitation unavailable"
+				return nil, true
+			}
+			return m.copyText(token, "Invitation"), true
 		case "r":
 			return m.openRaise(), true
 		case "p":
@@ -426,7 +416,7 @@ func (m *Model) gameStatus() string {
 	case game.StageInit:
 		return "Restoring saved game..."
 	case game.StageSessionPrepared, game.StageAwaitOpponentKeys:
-		return "Waiting for opponent | T: Invitation"
+		return "Waiting for opponent"
 	case game.StageAwaitInitialShuffle, game.StageAwaitFinalShuffle:
 		return "Waiting for opponent's shuffle"
 	case game.StageInitialDeposit, game.StagePlayer1Funding:

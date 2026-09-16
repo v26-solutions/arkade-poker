@@ -41,12 +41,12 @@ func (p *Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p, nil
 		}
 		if msg.String() == "f2" {
-			p.scene = (p.scene + 1) % 18
+			p.scene = (p.scene + 1) % 19
 			p.load()
 			return p, nil
 		}
 		if msg.String() == "f1" {
-			p.scene = (p.scene + 17) % 18
+			p.scene = (p.scene + 18) % 19
 			p.load()
 			return p, nil
 		}
@@ -56,7 +56,7 @@ func (p *Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.PasteMsg:
 		if strings.HasPrefix(msg.Content, "preview:") {
 			i, err := strconv.Atoi(strings.TrimPrefix(msg.Content, "preview:"))
-			if err == nil && i >= 0 && i < 18 {
+			if err == nil && i >= 0 && i < 19 {
 				p.scene = i
 				p.load()
 			}
@@ -166,6 +166,16 @@ func (p *Preview) load() {
 		m.snapshot.Choice = nil
 		m.shuffling = true
 		m.status = "Preparing the encrypted deck"
+	case 18:
+		// Public codec fixture; no wallet or live session is involved.
+		inv, err := game.DecodeInvitation("arkpg1:iCeIJ_QDoI0GAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh95vmZ--dy7rFWgYpXOhwsHApv82y3OKNlZ8oFbFvgXmCAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4_DXdzczovL25vcy5sb2w4Wfq0YppFfA")
+		if err != nil {
+			panic(err)
+		}
+		m.snapshot = game.Snapshot{Stage: game.StageAwaitOpponentKeys, Role: covenant.Player1, Terms: inv.Terms, Invitation: &inv}
+		m.clearPublic = [32]byte{1}
+		m.host.AbortSetup = func(context.Context, [32]byte) (*client.Session, error) { return nil, nil }
+		m.status = m.gameStatus()
 	}
 	p.inner = m
 }

@@ -179,7 +179,7 @@ func (m *Model) layout() *screen {
 		title := "POKER"
 		if m.snapshot.Invitation != nil {
 			title = "SESSION / PLAYER " + fmt.Sprint(m.snapshot.Role)
-			body = "SESSION READY\n\n" + termsText(m.snapshot.Terms) + "\n\n" + clean(m.status)
+			body = m.sessionBody(w-4, actionY-gap-boardY-2)
 		} else if m.connecting || m.shuffling || m.busy {
 			body = "PREPARING YOUR SESSION\n\n" + clean(m.status)
 		} else if m.snapshot.Outcome != nil {

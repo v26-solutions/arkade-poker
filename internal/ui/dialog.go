@@ -65,8 +65,6 @@ func (m *Model) dialog(f *screen) {
 			}
 		case raiseModal:
 			primary = "[ENTER] RAISE"
-		case tokenModal:
-			primary = "[Y] COPY INVITATION"
 		case exitModal:
 			primary = "Confirm exit"
 			body = strings.Split(body, "\n\n[ Cancel ]")[0]
@@ -127,7 +125,7 @@ func (m *Model) dialog(f *screen) {
 		}
 	}
 	cancel := "[ESC] CANCEL"
-	if m.modal == tokenModal || m.modal == payoutModal || m.modal == menuModal {
+	if m.modal == payoutModal || m.modal == menuModal {
 		cancel = "[ESC] CLOSE"
 	}
 	selected := true

@@ -41,7 +41,6 @@ const (
 	exitModal
 	createModal
 	joinModal
-	tokenModal
 	raiseModal
 	joinConfirmModal
 	clearGameModal

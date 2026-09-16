@@ -14,7 +14,7 @@ import (
 
 func TestLogShortcutAcrossHostsAndStates(t *testing.T) {
 	for _, browser := range []bool{false, true} {
-		for _, state := range []modal{noModal, exitModal, tokenModal, joinConfirmModal, clearGameModal, allInModal, payoutModal, menuModal, abortSetupModal} {
+		for _, state := range []modal{noModal, exitModal, joinConfirmModal, clearGameModal, allInModal, payoutModal, menuModal, abortSetupModal} {
 			for _, key := range []tea.KeyPressMsg{{Code: 'l'}, {Code: 'L'}, {Code: 'l', Mod: tea.ModShift, Text: "L"}} {
 				t.Run(fmt.Sprintf("browser=%t/modal=%d/key=%s", browser, state, key), func(t *testing.T) {
 					l := diagnostics.New(nil)

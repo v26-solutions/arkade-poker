@@ -263,18 +263,44 @@ func TestInvitationReviewAndCopyPreserveCompletePayload(t *testing.T) {
 	}
 	m.busy = false
 	m.snapshot = game.Snapshot{Stage: game.StageSessionPrepared, Invitation: &inv, Terms: inv.Terms, Role: covenant.Player1}
+	m.status = m.gameStatus()
 	var copied string
 	m.host.CopyText = func(text string) error { copied = text; return nil }
-	press(m, 't', 0)
 	if content := m.View().Content; lipgloss.Width(content) > 76 || lipgloss.Height(content) > 30 {
 		t.Fatal("invitation preview overflowed minimum terminal size")
 	}
-	cmd := press(m, 'y', 0)
-	if cmd == nil {
-		t.Fatal("missing token copy")
+	view = ansi.Strip(m.View().Content)
+	for _, want := range []string{token[:60], "copy for the complete invitation", "[Y] COPY INVITATION", "Waiting for opponent"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("inline invitation missing %q\n%s", want, view)
+		}
 	}
-	m.Update(cmd())
-	if copied != token {
-		t.Fatal("clipboard received a truncated invitation")
+	for _, activate := range []string{"shortcut", "enter", "click"} {
+		var cmd tea.Cmd
+		switch activate {
+		case "shortcut":
+			cmd = press(m, 'y', 0)
+		case "enter":
+			cmd = press(m, tea.KeyEnter, 0)
+		case "click":
+			for _, region := range m.layout().hits {
+				if region.id == "action:y" {
+					_, cmd = m.Update(tea.MouseClickMsg{X: region.rect.Min.X, Y: region.rect.Min.Y, Button: tea.MouseLeft})
+				}
+			}
+		}
+		if cmd == nil || m.modal != noModal || m.busy {
+			t.Fatalf("%s did not copy directly from the waiting screen", activate)
+		}
+		copied = ""
+		m.Update(cmd())
+		if copied != token || !strings.Contains(m.View().Content, "Invitation copied") {
+			t.Fatalf("%s did not copy the complete invitation with confirmation", activate)
+		}
+	}
+	m.driverUpdate(driverMsg{update: game.Update{Snapshot: playing().snapshot}})
+	view = ansi.Strip(m.View().Content)
+	if m.modal != noModal || strings.Contains(view, "arkpg1:") || !strings.Contains(view, "[C] CALL 200") {
+		t.Fatal("game start did not replace the inline invitation with the playable table")
 	}
 }

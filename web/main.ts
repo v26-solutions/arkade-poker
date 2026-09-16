@@ -1,4 +1,5 @@
 import { BoobaTerminal } from '@nimblemarkets/booba';
+import { loadSuitImages } from './suit-images';
 
 declare const POKER_WASM_PATH: string;
 declare const POKER_BUILD_CONFIG: PokerConfig;
@@ -31,6 +32,7 @@ async function start() {
     theme: { background: '#000000', foreground: '#7cff00', cursor: '#7cff00' },
   });
   await terminal.init();
+  await loadSuitImages(terminal.term!);
   // Preserve macOS browser shortcuts, including Cmd+C/V and Ctrl+C. Do not
   // preventDefault: the browser keeps handling these. Paste arrives through the
   // terminal's paste event and Bubble Tea's bracketed-paste message.

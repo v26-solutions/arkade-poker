@@ -13,6 +13,16 @@ card size and spacing. Modal dialogs dim the retained table. Rendering and
 mouse hit testing share rectangles, including each button's borders. Modal
 rectangles replace the table's hit regions so covered actions cannot be clicked.
 
+Browser cards at least seven rows tall display a larger, font-independent suit
+in a 3×3 cell area. The browser installs four transparent suit images, with normal
+and dim variants, into the alternate screen using Kitty graphics virtual
+placements before starting the UI. Placeholder cells encode the suit in the high
+byte of the image ID and inherit its low 24 bits from the text foreground color.
+This preserves winning-card backgrounds and lets the existing modal compositor
+dim and cover images as ordinary cells. Compact cards and native terminals retain
+the text suit. Image assets, colors and ID encoding live in `web/suit-images.ts`
+and `suit_images.go`; no renderer patch or separate drawing layer is used.
+
 The table shows known cards, cumulative wagers, remaining wager capacity and
 the pot (two stakes plus both wagers), with bonds separately identified.
 IN THIS HAND is the stake plus cumulative wagers, excluding the bond. Bets

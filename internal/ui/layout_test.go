@@ -101,19 +101,22 @@ func TestAllInConfirmationAndStalePosition(t *testing.T) {
 }
 
 func TestLayoutBoundsAndResultPrivacy(t *testing.T) {
-	for _, size := range [][2]int{{76, 30}, {80, 32}, {120, 40}, {160, 50}} {
-		for _, kind := range []modal{noModal, raiseModal, allInModal, payoutModal, menuModal, exitModal, clearGameModal} {
-			m := completedModel()
-			m.width, m.height = size[0], size[1]
-			if kind == raiseModal || kind == allInModal {
-				m = playing()
+	for _, browser := range []bool{false, true} {
+		for _, size := range [][2]int{{76, 30}, {80, 32}, {120, 40}, {160, 50}} {
+			for _, kind := range []modal{noModal, raiseModal, allInModal, payoutModal, menuModal, exitModal, clearGameModal} {
+				m := completedModel()
 				m.width, m.height = size[0], size[1]
-				m.openRaise()
-			}
-			m.modal = kind
-			v := m.View().Content
-			if lipgloss.Width(v) != size[0] || lipgloss.Height(v) != size[1] {
-				t.Fatalf("size %v modal %d: %dx%d", size, kind, lipgloss.Width(v), lipgloss.Height(v))
+				if kind == raiseModal || kind == allInModal {
+					m = playing()
+					m.width, m.height = size[0], size[1]
+					m.openRaise()
+				}
+				m.host.Browser = browser
+				m.modal = kind
+				v := m.View().Content
+				if lipgloss.Width(v) != size[0] || lipgloss.Height(v) != size[1] {
+					t.Fatalf("browser %t size %v modal %d: %dx%d", browser, size, kind, lipgloss.Width(v), lipgloss.Height(v))
+				}
 			}
 		}
 	}

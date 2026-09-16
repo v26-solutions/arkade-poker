@@ -27,6 +27,16 @@ type fileLog struct {
 
 var _ Log = (*fileLog)(nil)
 
+// PrepareDirectory durably creates the shared native data directory. Hosts
+// writing diagnostics before Open must preserve the same directory-creation
+// guarantees as the session store's first acknowledged append.
+func PrepareDirectory(directory string) error {
+	if directory == "" {
+		return ErrUnavailable
+	}
+	return durableMkdir(directory)
+}
+
 // Open uses an OS-held lock, released even after a process crash. The lock file
 // must never be unlinked: all contenders must lock the same inode. Each append
 // fsyncs a staged file, atomically renames it, then fsyncs its directory. Staged
@@ -55,18 +65,89 @@ func Clear(ctx context.Context, directory string, walletPublicKey [32]byte) erro
 		return err
 	}
 	defer l.Close()
-	entries, err := os.ReadDir(l.directory)
+	entries, err := l.clearEntries()
 	if err != nil {
 		return err
+	}
+	return l.clear(ctx, entries)
+}
+
+// ClearAll clears recognized wallet stores, preserving diagnostics and unrelated
+// files. Acquire every existing wallet lock and validate all contents before any
+// deletion, so an active or unrecognized store cannot cause a partial clear.
+// Empty wallet directories and their lock inodes must remain for other writers.
+func ClearAll(ctx context.Context, directory string) error {
+	if ctx == nil || directory == "" {
+		return ErrUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	type pendingClear struct {
+		log     *fileLog
+		entries []os.DirEntry
+	}
+	var stores []pendingClear
+	defer func() {
+		for _, store := range stores {
+			_ = store.log.Close()
+		}
+	}()
+	for _, entry := range entries {
+		name := entry.Name()
+		if len(name) != 64 || strings.ToLower(name) != name {
+			continue
+		}
+		public, err := hex.DecodeString(name)
+		if err != nil {
+			continue
+		}
+		if !entry.IsDir() { // In particular, never follow wallet-directory symlinks.
+			return ErrCorrupt
+		}
+		l, err := lockFiles(ctx, directory, [32]byte(public))
+		if err != nil {
+			return err
+		}
+		stores = append(stores, pendingClear{log: l})
+		files, err := l.clearEntries()
+		if err != nil {
+			return err
+		}
+		stores[len(stores)-1].entries = files
+	}
+	for _, store := range stores {
+		if err := store.log.clear(ctx, store.entries); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *fileLog) clearEntries() ([]os.DirEntry, error) {
+	entries, err := os.ReadDir(l.directory)
+	if err != nil {
+		return nil, err
 	}
 	for _, entry := range entries {
 		if entry.Name() == "writer.lock" {
 			continue
 		}
 		if !entry.Type().IsRegular() || !(strings.HasSuffix(entry.Name(), ".record") || strings.HasPrefix(entry.Name(), ".append-")) {
-			return ErrCorrupt
+			return nil, ErrCorrupt
 		}
 	}
+	return entries, nil
+}
+
+func (l *fileLog) clear(ctx context.Context, entries []os.DirEntry) error {
 	// Delete from the end so an interrupted clear does not introduce gaps into
 	// an otherwise intact log. A failed clear can be explicitly retried.
 	for i := len(entries) - 1; i >= 0; i-- {

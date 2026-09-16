@@ -7,7 +7,6 @@ import (
 	"errors"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"time"
 
 	"arkade-poker/go/internal/appconfig"
@@ -21,19 +20,12 @@ import (
 	"github.com/atotto/clipboard"
 )
 
-func env(name, fallback string) string {
-	if v := os.Getenv(name); v != "" {
-		return v
-	}
-	return fallback
-}
-
 func newHost() (ui.Host, func(), error) {
 	settings, err := appconfig.FromEnv(os.Getenv)
 	if err != nil {
 		return ui.Host{}, nil, err
 	}
-	directory, err := os.UserConfigDir()
+	directory, err := dataDirectory()
 	if err != nil {
 		return ui.Host{}, nil, err
 	}
@@ -42,9 +34,9 @@ func newHost() (ui.Host, func(), error) {
 		DelegatorURL: settings.DelegatorURL,
 		IndexerURL:   settings.IndexerURL},
 		Open: func(ctx context.Context, public [32]byte) (storage.Log, error) {
-			return storage.Open(ctx, env("POKER_DATA_DIR", filepath.Join(directory, "arkade-poker-go")), public)
+			return storage.Open(ctx, directory, public)
 		}, Clear: func(ctx context.Context, public [32]byte) error {
-			return storage.Clear(ctx, env("POKER_DATA_DIR", filepath.Join(directory, "arkade-poker-go")), public)
+			return storage.Clear(ctx, directory, public)
 		}, Connect: connectServices}
 	runtime := client.New(cfg)
 	h := ui.Host{CopyText: clipboard.WriteAll, ConnectSession: runtime.Open, ClearSavedGame: runtime.ClearSavedGame, AbortSetup: runtime.AbortSetup, RelayURL: settings.RelayURL, DefaultTerms: settings.Terms}

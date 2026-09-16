@@ -62,7 +62,22 @@ Logs cover the current run and retain up to 2,048 recent entries (1 MiB), with
 private-key fields, key encodings and mnemonic phrases redacted before retention.
 Long hexadecimal values are conservatively redacted too. The browser also writes
 the same redacted entries to its developer console. Diagnostic logs exclude
-private recovery records and reset when the application restarts.
+private recovery records; the clipboard buffer resets when the application restarts.
+
+Native also saves the full run's redacted logs to `last.log` alongside the session
+data: `POKER_DATA_DIR`, or `arkade-poker-go` under the OS user configuration
+directory. The file remains after exit and is replaced on the next normal launch.
+These commands run without opening the TUI or importing a wallet:
+
+```sh
+poker --show-last-logs
+poker --clear-session-data
+```
+
+Clear shows the data directory and requires typing `DELETE` before removing saved
+sessions for all wallets. It keeps `last.log` and the persistent wallet lock files,
+and refuses to clear if a saved session is in use. Neither command replaces the
+last logs.
 
 ## How it works
 

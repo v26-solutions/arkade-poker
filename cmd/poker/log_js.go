@@ -8,9 +8,11 @@ import (
 	"syscall/js"
 )
 
-func logOutput() io.Writer { return browserConsole{} }
+func logOutput() (io.WriteCloser, error) { return browserConsole{}, nil }
 
 type browserConsole struct{}
+
+func (browserConsole) Close() error { return nil }
 
 // diagnostics calls this only after redaction; never expose live Go objects.
 func (browserConsole) Write(p []byte) (int, error) {

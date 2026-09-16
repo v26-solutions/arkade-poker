@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -21,7 +22,17 @@ func main() {
 }
 
 func run() (err error) {
-	logs := diagnostics.New(logOutput())
+	// Maintenance commands must finish before opening/replacing the last log,
+	// importing a wallet, contacting services or constructing the TUI.
+	if handled, err := runCLI(os.Args[1:], os.Stdin, os.Stdout); handled || err != nil {
+		return err
+	}
+	output, err := logOutput()
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, output.Close()) }()
+	logs := diagnostics.New(output)
 	restoreLogging := logs.Install()
 	defer restoreLogging()
 	slog.Info("Application starting", "os", runtime.GOOS, "arch", runtime.GOARCH, "go", runtime.Version())

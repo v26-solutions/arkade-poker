@@ -131,6 +131,13 @@ The local stack needs its `delegate` profile enabled for these examples.
 Native `POKER_DATA_DIR` selects the session storage directory and
 `POKER_WALLET_KEY` imports a wallet key at startup. The default storage directory
 is `arkade-poker-go` under the operating system's user configuration directory.
+Native redacted diagnostic output is saved as `last.log` in that same directory
+with 0600 permissions. A normal launch replaces it; `poker --show-last-logs`
+streams it to stdout without starting the TUI. `poker --clear-session-data`
+requires typing `DELETE` and clears all recognized wallet session records while
+preserving logs, unrelated files and persistent writer locks. It checks every
+wallet lock before deleting any records and refuses if one is active. Both
+commands honor `POKER_DATA_DIR` and work without wallet or service configuration.
 Wallet keys are entered on the player's device and are never web build settings.
 Both `POKER_WALLET_KEY` and Add Wallet accept nsec, 64 hexadecimal digits, or an
 English BIP39 mnemonic (12/15/18/21/24 words, no extra passphrase). Mnemonics import

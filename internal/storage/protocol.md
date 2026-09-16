@@ -37,6 +37,14 @@ Clear deletes record/staging files from the end and syncs the directory before
 success, retaining the writer.lock inode. Unexpected files are rejected. An
 interrupted or failed clear may leave records and must be explicitly retried.
 
+Native `ClearAll` enumerates the existing lowercase wallet-key directories and
+acquires every wallet lock before removing any record. It validates all directory
+contents first, rejects wallet-directory symlinks, and uses the same reverse-order
+record/staging removal as `Clear`. Root files (including the native `last.log`)
+and unrelated directories remain untouched. The native maintenance command asks
+for explicit confirmation before calling it. Wallet directories and their lock
+inodes remain even when empty, so later writers still coordinate on the same lock.
+
 ## Browser
 
 The database/lock name is `arkade-poker/log/v1/<database>/<public-key-hex>`.

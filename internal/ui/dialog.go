@@ -117,6 +117,15 @@ func (m *Model) dialog(f *screen) {
 	}
 	f.put(x, y, panel(title, w, h))
 	f.put(x+3, y+2, textStyle.Render(fit(strings.Join(lines, "\n"), inner, len(lines), false)))
+	if o := m.snapshot.Outcome; m.modal == payoutModal && o != nil && o.Transaction != nil {
+		txid := o.Transaction.TxHash().String()
+		for i, line := range lines {
+			if line == txid {
+				f.put(x+3, y+2+i, textStyle.Underline(true).Render(txid))
+				f.region("payout-copy", x+3, y+2+i, len(txid), 1)
+			}
+		}
+	}
 	cancel := "[ESC] CANCEL"
 	if m.modal == tokenModal || m.modal == payoutModal || m.modal == menuModal {
 		cancel = "[ESC] CLOSE"
@@ -168,7 +177,7 @@ func (m *Model) payoutDetails() string {
 	if o == nil || o.Transaction == nil {
 		return "No accepted payout transaction is available."
 	}
-	body := "ACCEPTED PAYOUT TRANSACTION\n" + o.Transaction.TxHash().String()
+	body := "ACCEPTED PAYOUT TRANSACTION / CLICK ID TO COPY\n" + o.Transaction.TxHash().String()
 	if value, ok := m.payout(); ok {
 		mine, _ := m.wagers()
 		t := m.snapshot.Terms

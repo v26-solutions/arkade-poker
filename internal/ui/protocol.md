@@ -27,7 +27,8 @@ The accepted outcome appears as YOU WIN, YOU LOSE or SPLIT POT in the status
 bar. Best-five highlights and hand names use the same strength ordering as the
 settlement ranker, without generating proofs in View. Accepted payout and net
 (payout minus local stake, bond and wagers) appear beside the result. P opens
-a read-only payout dialog with the complete accepted transaction ID; N starts
+a read-only payout dialog with the complete accepted transaction ID, which can be
+clicked to copy to the clipboard with confirmation in the status bar; N starts
 the next game. Pending settlement keeps the table without declaring a winner. The Raise by form
 accepts the increase over the opponent's wager and shows the call amount, total
 additional sats and resulting total bet across the hand. Its minimum/maximum

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"arkade-poker/go/internal/appconfig"
@@ -61,7 +62,10 @@ type connectedMsg struct {
 	session *client.Session
 }
 
-type copiedMsg struct{ err error }
+type copiedMsg struct {
+	err     error
+	subject string
+}
 
 // ProgressMsg is transient and never recorded in the private game log.
 type ProgressMsg struct {
@@ -186,13 +190,24 @@ func (m *Model) copyWallet() tea.Cmd {
 	if m.receive.Address == "" {
 		return nil
 	}
-	address, copyText := m.receive.Address, m.host.CopyText
-	m.copyNotice = "Address copied"
+	return m.copyText(m.receive.Address, "Address")
+}
+
+func (m *Model) copyPayout() tea.Cmd {
+	o := m.snapshot.Outcome
+	if o == nil || o.Transaction == nil {
+		return nil
+	}
+	return m.copyText(o.Transaction.TxHash().String(), "Transaction ID")
+}
+
+func (m *Model) copyText(text, subject string) tea.Cmd {
+	copyText := m.host.CopyText
 	return func() tea.Msg {
 		if copyText == nil {
-			return copiedMsg{errors.New("clipboard unavailable")}
+			return copiedMsg{err: errors.New("clipboard unavailable"), subject: subject}
 		}
-		return copiedMsg{copyText(address)}
+		return copiedMsg{err: copyText(text), subject: subject}
 	}
 }
 
@@ -229,10 +244,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.logNoticeUntil = m.frame + 50
 	case copiedMsg:
 		if msg.err != nil {
-			m.errorText = "Could not copy the address to the clipboard."
+			m.errorText = "Could not copy the " + strings.ToLower(msg.subject) + " to the clipboard."
 			m.copyNoticeUntil = 0
 		} else {
 			m.errorText = ""
+			m.copyNotice = msg.subject + " copied"
 			m.copyNoticeUntil = m.frame + 25
 		}
 	case connectedMsg:
@@ -335,6 +351,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.openWallet()
 		case "wallet-copy":
 			return m, m.copyWallet()
+		case "payout-copy":
+			return m, m.copyPayout()
 		case "clear":
 			m.openClearGame()
 			return m, nil

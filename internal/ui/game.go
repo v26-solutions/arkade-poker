@@ -290,14 +290,7 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 				m.errorText = "Invitation unavailable"
 				return nil, true
 			}
-			copyText := m.host.CopyText
-			m.copyNotice = "Invitation copied"
-			return func() tea.Msg {
-				if copyText == nil {
-					return copiedMsg{errors.New("clipboard unavailable")}
-				}
-				return copiedMsg{copyText(token)}
-			}, true
+			return m.copyText(token, "Invitation"), true
 		}
 		return nil, true
 	}

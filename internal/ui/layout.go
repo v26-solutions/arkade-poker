@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"arkade-poker/go/internal/buildinfo"
 	"arkade-poker/go/internal/covenant"
 	"arkade-poker/go/internal/game"
 	"charm.land/lipgloss/v2"
@@ -192,6 +193,9 @@ func (m *Model) layout() *screen {
 			welcome = true
 		}
 		f.section(title, body, boardY, actionY-gap-boardY)
+		if welcome {
+			f.put(2, actionY-gap-2, dimStyle.Render(fit(clean(buildinfo.Version), w-4, 1, true)))
+		}
 	}
 	if m.canClearGame() {
 		label := "[X] Clear saved game"

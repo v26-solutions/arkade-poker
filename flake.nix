@@ -36,6 +36,8 @@
             env.CGO_ENABLED = "0";
             tags = [ "purego" ];
             buildFlags = [ "-buildvcs=false" ];
+            ldflags = pkgs.lib.optional (inputs.self ? rev || inputs.self ? dirtyRev)
+              "-X=arkade-poker/go/internal/buildinfo.Version=${inputs.self.shortRev or inputs.self.dirtyShortRev}";
             meta.mainProgram = "poker";
           };
 

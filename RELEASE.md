@@ -20,6 +20,12 @@ make clean              # remove build output
 `GO=/path/to/go make all` selects the Go toolchain. The upstream booba WASM
 builder invokes `go` internally, so put the matching toolchain on `PATH` too.
 
+The welcome screen shows the exact Git tag at the build commit, or its short
+commit SHA when untagged, centered inside the bottom of the poker panel.
+Make builds stamp both native and browser artifacts; Nix builds stamp the commit
+SHA (with a dirty suffix for local changes). Source archives preserve the label
+when rebuilt without Git. Unstamped builds show `dev`.
+
 The build tool is `go run ./scripts/build`. It bundles the TypeScript browser
 entry point with esbuild's Go API, pinned in `go.mod` and `go.sum`. The root
 `node_modules` used to contain only esbuild and its platform executable; there

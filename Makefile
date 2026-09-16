@@ -7,8 +7,7 @@ WEB_FLAGS ?=
 all: native web
 
 native:
-	mkdir -p build
-	CGO_ENABLED=0 $(GO) build -tags=purego -trimpath -buildvcs=false -o build/poker ./cmd/poker
+	$(BUILD) native
 
 web:
 	$(BUILD) web $(WEB_FLAGS)

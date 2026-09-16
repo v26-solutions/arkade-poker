@@ -31,6 +31,8 @@ func run(args []string) error {
 	}
 	if len(args) == 1 {
 		switch args[0] {
+		case "native":
+			return buildNative()
 		case "source":
 			return sourceRelease()
 		case "artifacts":
@@ -45,7 +47,7 @@ func run(args []string) error {
 			return serve(args[1])
 		}
 	}
-	return fmt.Errorf("usage: go run ./scripts/build web [flags]|source|artifacts|qualify <ui|shuffle|storage|transport>|serve <web|ui|shuffle|storage>")
+	return fmt.Errorf("usage: go run ./scripts/build native|web [flags]|source|artifacts|qualify <ui|shuffle|storage|transport>|serve <web|ui|shuffle|storage>")
 }
 
 func goCommand(dir string, env []string, args ...string) *exec.Cmd {

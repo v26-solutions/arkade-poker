@@ -48,7 +48,7 @@ func buildWASM(target, output string) error {
 		return err
 	}
 	// Retain upstream booba's signal/TTY stubs and temporary modfile handling.
-	args := []string{"run", "github.com/NimbleMarkets/go-booba/cmd/booba-wasm-build", "-trimpath", "-buildvcs=false", "-o", output}
+	args := []string{"run", "github.com/NimbleMarkets/go-booba/cmd/booba-wasm-build", "-trimpath", "-buildvcs=false", "-ldflags", versionLDFlags(), "-o", output}
 	if target == "./cmd/ui-preview" {
 		args = append(args, "-tags=uipreview")
 	}

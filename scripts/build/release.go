@@ -65,6 +65,7 @@ func sourceRelease() error {
 			return err
 		}
 	}
+	e["internal/buildinfo/version.go"] = entry{[]byte(fmt.Sprintf("package buildinfo\n\nvar Version = %q\n", buildVersion())), 0o644}
 	return archive("build/releases", "arkade-poker-go-source", e)
 }
 

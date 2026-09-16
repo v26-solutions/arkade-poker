@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"maps"
 	"os/exec"
 	"testing"
 
 	"arkade-poker/go/internal/appconfig"
 	"arkade-poker/go/internal/game"
+	"arkade-poker/go/internal/palette"
 	"github.com/evanw/esbuild/pkg/api"
 )
 
@@ -55,7 +57,7 @@ func TestEmbeddedWebConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := api.Transform("process.stdout.write(JSON.stringify({config: POKER_BUILD_CONFIG, wasm: POKER_WASM_PATH}))", api.TransformOptions{Define: defines})
+	result := api.Transform("process.stdout.write(JSON.stringify({config: POKER_BUILD_CONFIG, wasm: POKER_WASM_PATH, palette: POKER_PALETTE}))", api.TransformOptions{Define: defines})
 	if len(result.Errors) != 0 {
 		t.Fatal(result.Errors)
 	}
@@ -64,13 +66,14 @@ func TestEmbeddedWebConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got struct {
-		Config appconfig.Config
-		WASM   string
+		Config  appconfig.Config
+		WASM    string
+		Palette map[string]string
 	}
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Config != c || got.WASM != "./poker.hash.wasm" {
+	if got.Config != c || got.WASM != "./poker.hash.wasm" || !maps.Equal(got.Palette, palette.Colors()) {
 		t.Fatalf("embedded configuration changed: %+v", got)
 	}
 }

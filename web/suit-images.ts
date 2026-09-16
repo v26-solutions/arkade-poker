@@ -11,7 +11,7 @@ interface ImageTerminal {
   write(data: string, callback: () => void): void;
 }
 
-export async function loadSuitImages(terminal: ImageTerminal): Promise<void> {
+export async function loadSuitImages(terminal: ImageTerminal, colors: readonly string[]): Promise<void> {
   const canvas = document.createElement('canvas');
   canvas.width = 96;
   canvas.height = 160;
@@ -20,16 +20,16 @@ export async function loadSuitImages(terminal: ImageTerminal): Promise<void> {
   // so install assets there rather than in the normal terminal buffer.
   const commands: string[] = ['\x1b[?1049h'];
   for (let suit = 0; suit < paths.length; suit++) {
-    for (const color of [0x7cff00, 0x95b77c]) {
+    for (const color of colors) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(2, 34);
       ctx.scale(0.92, 0.92);
-      ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      ctx.fillStyle = color;
       ctx.fill(new Path2D(paths[suit]));
       ctx.restore();
       const data = canvas.toDataURL('image/png').split(',')[1];
-      const id = ((suit + 1) << 24) | color;
+      const id = ((suit + 1) << 24) | parseInt(color.slice(1), 16);
       // q=2 avoids replies entering Bubble Tea's keyboard input. U=1 creates
       // a virtual placement; only the cells emitted by the UI show the image.
       for (let offset = 0; offset < data.length; offset += 4096) {

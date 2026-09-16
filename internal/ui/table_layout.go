@@ -7,13 +7,14 @@ import (
 	"arkade-poker/go/internal/covenant"
 	"arkade-poker/go/internal/game"
 	"arkade-poker/go/internal/merkel"
+	"arkade-poker/go/internal/palette"
 	"charm.land/lipgloss/v2"
 )
 
 func playingCard(c game.KnownCard, w, h int, hidden, winning, imageSuits bool) string {
-	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(green)
+	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(accent)
 	if winning {
-		style = style.Border(lipgloss.DoubleBorder()).Background(lipgloss.Color("#111e07"))
+		style = style.Border(lipgloss.DoubleBorder()).Background(lipgloss.Color(palette.Highlight))
 	}
 	rows := strings.Split(fit("", w-2, h-2, false), "\n")
 	if c.Known && c.Index < 52 {
@@ -34,7 +35,7 @@ func playingCard(c game.KnownCard, w, h int, hidden, winning, imageSuits bool) s
 			}
 		}
 	} else {
-		style = style.Foreground(lipgloss.Color("#95b77c")).BorderForeground(lipgloss.Color("#527339"))
+		style = style.Foreground(lipgloss.Color(palette.Muted)).BorderForeground(lipgloss.Color(palette.Border))
 		mark := "—"
 		if hidden {
 			mark = "░"
@@ -187,7 +188,7 @@ func (m *Model) resultSummary() string {
 		return ""
 	}
 	label := map[game.OutcomeKind]string{game.Won: "YOU WIN", game.Lost: "YOU LOSE", game.Tied: "SPLIT POT", game.Aborted: "SESSION ABORTED"}[o.Kind]
-	badge := textStyle.Foreground(ink).Background(green).Render(" " + label + " ")
+	badge := textStyle.Foreground(ink).Background(accent).Render(" " + label + " ")
 	reason := "SHOWDOWN"
 	if o.Settlement.Kind == game.SettlementConcession {
 		reason = "FOLD"

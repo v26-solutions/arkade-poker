@@ -139,6 +139,7 @@ func buildWeb(target, output, extraHTML string, settings appconfig.Config) error
 		return err
 	}
 	page := strings.NewReplacer("./main.js", "./"+frontend, "./wasm_exec.js", "./"+runtime,
+		"/* POKER_PALETTE_CSS */", paletteCSS(),
 		"</body>", extraHTML+"</body>").Replace(string(html))
 	// Publish the entry page after its assets. Package only this manifest's
 	// files, excluding old fingerprints and development qualification data.

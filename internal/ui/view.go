@@ -4,17 +4,15 @@ import (
 	"strconv"
 	"strings"
 
+	"arkade-poker/go/internal/palette"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
-var green = lipgloss.Color("#7cff00")
-var black = lipgloss.Color("#000000")
-
-// The pinned Ghostty renderer treats RGB(0,0,0) as default foreground.
-// Near-black preserves the demo's dark labels on green in both hosts.
-var ink = lipgloss.Color("#010101")
-var textStyle = lipgloss.NewStyle().Foreground(green).Background(black)
+var accent = lipgloss.Color(palette.Accent)
+var background = lipgloss.Color(palette.Background)
+var ink = lipgloss.Color(palette.Ink)
+var textStyle = lipgloss.NewStyle().Foreground(accent).Background(background)
 
 // Preserve the human-readable prefix and separator, then show four payload
 // characters and the last four checksum characters. Only display text is
@@ -62,7 +60,7 @@ func (m *Model) View() tea.View {
 	v := tea.NewView(m.layout().content())
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
-	v.BackgroundColor, v.ForegroundColor = black, green
+	v.BackgroundColor, v.ForegroundColor = background, accent
 	v.WindowTitle = "Arkade Poker"
 	return v
 }

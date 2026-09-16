@@ -3,6 +3,7 @@ import { loadSuitImages } from './suit-images';
 
 declare const POKER_WASM_PATH: string;
 declare const POKER_BUILD_CONFIG: PokerConfig;
+declare const POKER_PALETTE: { accent: string; muted: string; background: string };
 
 interface PokerConfig {
   arkd: string;
@@ -26,13 +27,14 @@ const loading = document.querySelector<HTMLDivElement>('#loading')!;
 
 async function start() {
   window.pokerConfig = POKER_BUILD_CONFIG;
+  const palette = POKER_PALETTE;
   const terminal = new BoobaTerminal('terminal', {
     fontSize: 14, fontFamily: '"SFMono-Regular", Menlo, Consolas, monospace', cursorBlink: true, scrollback: 0,
     allowOSC52: true,
-    theme: { background: '#000000', foreground: '#7cff00', cursor: '#7cff00' },
+    theme: { background: palette.background, foreground: palette.accent, cursor: palette.accent },
   });
   await terminal.init();
-  await loadSuitImages(terminal.term!);
+  await loadSuitImages(terminal.term!, [palette.accent, palette.muted]);
   // Preserve macOS browser shortcuts, including Cmd+C/V and Ctrl+C. Do not
   // preventDefault: the browser keeps handling these. Paste arrives through the
   // terminal's paste event and Bubble Tea's bracketed-paste message.

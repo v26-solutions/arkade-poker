@@ -9,11 +9,12 @@ import (
 	"arkade-poker/go/internal/buildinfo"
 	"arkade-poker/go/internal/covenant"
 	"arkade-poker/go/internal/game"
+	"arkade-poker/go/internal/palette"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
-var dimStyle = textStyle.Foreground(lipgloss.Color("#95b77c"))
+var dimStyle = textStyle.Foreground(lipgloss.Color(palette.Muted))
 
 type hitRegion struct {
 	id   string
@@ -99,11 +100,11 @@ func (s *screen) section(title, body string, y, h int) {
 }
 
 func button(label string, w int, selected bool) string {
-	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(green).Width(w - 2).Align(lipgloss.Center)
+	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(accent).Width(w - 2).Align(lipgloss.Center)
 	if selected {
 		// Explicit colors, never ANSI inverse: both terminal hosts must keep
-		// the selected label black against its green background.
-		style = style.Foreground(ink).Background(green).Border(lipgloss.DoubleBorder()).BorderForeground(ink).BorderBackground(green)
+		// the selected label dark against its accent background.
+		style = style.Foreground(ink).Background(accent).Border(lipgloss.DoubleBorder()).BorderForeground(ink).BorderBackground(accent)
 	}
 	return style.Render(ansi.Truncate(label, max(1, w-2), "…"))
 }

@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"arkade-poker/go/internal/appconfig"
+	"arkade-poker/go/internal/palette"
 )
 
 func webConfig(args []string) (appconfig.Config, error) {
@@ -46,8 +49,23 @@ func frontendDefines(wasm string, settings appconfig.Config) (map[string]string,
 	if err != nil {
 		return nil, err
 	}
+	colors, err := json.Marshal(palette.Colors())
+	if err != nil {
+		return nil, err
+	}
 	return map[string]string{
 		"POKER_WASM_PATH":    strconv.Quote("./" + wasm),
 		"POKER_BUILD_CONFIG": string(data),
+		"POKER_PALETTE":      string(colors),
 	}, nil
+}
+
+func paletteCSS() string {
+	var properties []string
+	for name, color := range palette.Colors() {
+		properties = append(properties, "--"+name+": "+color+";")
+	}
+	// Keep generated assets deterministic despite map iteration order.
+	slices.Sort(properties)
+	return ":root { " + strings.Join(properties, " ") + " }"
 }

@@ -18,10 +18,12 @@ func playingCard(c game.KnownCard, w, h int, hidden, winning bool) string {
 	rows := strings.Split(fit("", w-2, h-2, false), "\n")
 	if c.Known && c.Index < 52 {
 		rank := []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"}[c.Index%13]
-		suit := []string{"♣", "♢", "♡", "♠"}[c.Index/13]
-		rows[0] = rank + strings.Repeat(" ", w-4-len(rank)) + suit
+		// Use a text-presentation heart to avoid Ghostty's hollow U+2665 fallback.
+		suit := []string{"♣", "♦", "❤\ufe0e", "♠"}[c.Index/13]
+		gap := strings.Repeat(" ", w-2-lipgloss.Width(rank+suit))
+		rows[0] = rank + gap + suit
 		if h > 3 {
-			rows[len(rows)-1] = suit + strings.Repeat(" ", w-4-len(rank)) + rank
+			rows[len(rows)-1] = suit + gap + rank
 			rows[len(rows)/2] = fit(suit, w-2, 1, true)
 		}
 	} else {

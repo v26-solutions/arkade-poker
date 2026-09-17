@@ -3,7 +3,7 @@ import { loadSuitImages } from './suit-images';
 
 declare const POKER_WASM_PATH: string;
 declare const POKER_BUILD_CONFIG: PokerConfig;
-declare const POKER_PALETTE: { accent: string; muted: string; background: string };
+declare const POKER_PALETTE: { accent: string; muted: string; background: string; ink: string };
 
 interface PokerConfig {
   arkd: string;
@@ -34,7 +34,7 @@ async function start() {
     theme: { background: palette.background, foreground: palette.accent, cursor: palette.accent },
   });
   await terminal.init();
-  await loadSuitImages(terminal.term!, [palette.accent, palette.muted]);
+  await loadSuitImages(terminal.term!, [palette.accent, palette.muted, palette.ink]);
   // Preserve macOS browser shortcuts, including Cmd+C/V and Ctrl+C. Do not
   // preventDefault: the browser keeps handling these. Paste arrives through the
   // terminal's paste event and Bubble Tea's bracketed-paste message.

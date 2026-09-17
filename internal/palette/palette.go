@@ -6,12 +6,12 @@ const (
 	Accent     = "#f2f2f2"
 	Muted      = "#999999"
 	Border     = "#555555"
-	Highlight  = "#1a1a1a"
-	Background = "#000000"
+	Highlight  = "#ffffff"
+	Background = "#094c00"
 	Surface    = "#111111"
-	// The pinned Ghostty renderer treats pure black as default foreground.
-	// Near-black keeps labels legible on the accent background.
-	Ink = "#010101"
+	// Ink is the foreground on light surfaces: selected button labels,
+	// result badges, and highlighted card ranks and suits.
+	Ink = "#094c00"
 )
 
 // Colors supplies the browser bundle and its CSS from the same palette.

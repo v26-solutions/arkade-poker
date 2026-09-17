@@ -11,10 +11,12 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-func playingCard(c game.KnownCard, w, h int, hidden, winning, imageSuits bool) string {
+func playingCard(c game.KnownCard, w, h int, winning, imageSuits bool) string {
 	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(accent)
 	if winning {
-		style = style.Border(lipgloss.DoubleBorder()).Background(lipgloss.Color(palette.Highlight))
+		highlight := lipgloss.Color(palette.Highlight)
+		style = style.Border(lipgloss.DoubleBorder()).Foreground(ink).Background(highlight).
+			BorderForeground(highlight).BorderBackground(highlight)
 	}
 	rows := strings.Split(fit("", w-2, h-2, false), "\n")
 	if c.Known && c.Index < 52 {
@@ -35,27 +37,20 @@ func playingCard(c game.KnownCard, w, h int, hidden, winning, imageSuits bool) s
 			}
 		}
 	} else {
-		style = style.Foreground(lipgloss.Color(palette.Muted)).BorderForeground(lipgloss.Color(palette.Border))
-		mark := "—"
-		if hidden {
-			mark = "░"
-			for i := range rows {
-				rows[i] = strings.Repeat("░", w-2)
-			}
-			mark = "?"
+		for i := range rows {
+			rows[i] = strings.Repeat("░", w-2)
 		}
-		rows[len(rows)/2] = fit(mark, w-2, 1, true)
 	}
 	return style.Render(strings.Join(rows, "\n"))
 }
 
-func cardGroup(cards []game.KnownCard, w, h int, hidden bool, winning map[byte]bool, imageSuits bool) string {
+func cardGroup(cards []game.KnownCard, w, h int, winning map[byte]bool, imageSuits bool) string {
 	var parts []string
 	for i, c := range cards {
 		if i != 0 {
 			parts = append(parts, "  ")
 		}
-		parts = append(parts, playingCard(c, w, h, hidden, c.Known && winning[c.Index], imageSuits))
+		parts = append(parts, playingCard(c, w, h, c.Known && winning[c.Index], imageSuits))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
@@ -129,7 +124,7 @@ func (m *Model) tableSections(f *screen, boardY, boardH, handY, handH int) {
 	if boardH >= 21 && f.w >= 110 {
 		cardW, cardH = 11, 9
 	}
-	oppRow := lipgloss.JoinHorizontal(lipgloss.Center, cardGroup(opponent[:], 7, oppH, true, winning, m.host.Browser), "   ", oppInfo)
+	oppRow := lipgloss.JoinHorizontal(lipgloss.Center, cardGroup(opponent[:], 7, oppH, winning, m.host.Browser), "   ", oppInfo)
 	pot := fmt.Sprintf("POT %s SATS", formatSats(2*s.Terms.Stake+int64(mine+theirs)))
 	if winning != nil {
 		pot += " / WINNING FIVE HIGHLIGHTED"
@@ -142,7 +137,7 @@ func (m *Model) tableSections(f *screen, boardY, boardH, handY, handH int) {
 	}
 	// Center each differently sized row before stacking it into the board.
 	inner := f.w - 4
-	body := fit(oppRow, inner, oppH, true) + spacer + fit(cardGroup(board, cardW, cardH, false, winning, m.host.Browser), inner, cardH, true) + spacer + fit(pot, inner, 1, true)
+	body := fit(oppRow, inner, oppH, true) + spacer + fit(cardGroup(board, cardW, cardH, winning, m.host.Browser), inner, cardH, true) + spacer + fit(pot, inner, 1, true)
 	f.section("BOARD / "+street, body, boardY, boardH)
 	remaining := max(int64(0), s.Terms.MaxWager-int64(mine))
 	info := fmt.Sprintf("IN THIS HAND %s SATS", formatSats(s.Terms.Stake+int64(mine)))
@@ -162,7 +157,7 @@ func (m *Model) tableSections(f *screen, boardY, boardH, handY, handH int) {
 	if holeH >= 7 {
 		holeW = 9
 	}
-	row := lipgloss.JoinHorizontal(lipgloss.Center, cardGroup(own[:], holeW, holeH, true, winning, m.host.Browser), "   ", info)
+	row := lipgloss.JoinHorizontal(lipgloss.Center, cardGroup(own[:], holeW, holeH, winning, m.host.Browser), "   ", info)
 	f.section(fmt.Sprintf("YOUR HAND / PLAYER %d", s.Role), row, handY, handH)
 }
 

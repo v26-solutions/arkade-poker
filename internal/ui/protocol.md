@@ -16,13 +16,16 @@ rectangles replace the table's hit regions so covered actions cannot be clicked.
 `internal/palette/palette.go` is the single source of UI colors for both hosts.
 The Go UI uses its semantic constants directly. The web build embeds the same
 palette in JavaScript and generates CSS variables for the page and preview
-controls. The browser uses its accent and muted colors for the terminal and suit
-images, including their color-based image IDs. To change the theme, edit the
-palette's six-digit RGB values and rebuild; there is no runtime theme switching.
+controls. The browser uses its accent, muted and ink colors for suit images,
+including their color-based image IDs. Winning cards use the highlight color
+across their full area, including border cells, with ink-colored ranks and suits.
+Unrevealed cards use accent-colored borders and a full interior of `░` cells,
+for both hole cards and the board. To change the theme, edit the palette's
+six-digit RGB values and rebuild; there is no runtime theme switching.
 
 Browser cards at least seven rows tall display a larger, font-independent suit
-in a 3×3 cell area. The browser installs four transparent suit images, with normal
-and dim variants, into the alternate screen using Kitty graphics virtual
+in a 3×3 cell area. The browser installs four transparent suit images, with normal,
+dim and winning-card variants, into the alternate screen using Kitty graphics virtual
 placements before starting the UI. Placeholder cells encode the suit in the high
 byte of the image ID and inherit its low 24 bits from the text foreground color.
 This preserves winning-card backgrounds and lets the existing modal compositor
@@ -183,11 +186,12 @@ minimum-grid layout, native race/vet and both host builds pass after that fix.
 Compact invitation sharing now uses unpadded base64url; the long-relay regression
 still covers complete copy/join payloads over 2048 characters.
 
-Selected buttons use the palette's explicit near-black ink foreground and accent
+Selected buttons use the palette's explicit ink foreground and accent
 background. The pinned Ghostty renderer treats RGB(0,0,0) as the default
 foreground, so pure black and ANSI inverse both make selected text disappear.
-Near-black fixes both selected button labels and the result badge without
-modifying the pinned renderer. Native terminals render the same styles.
+Keep Ink at a nonzero RGB value so selected button labels, result badges and
+highlighted card text remain visible without modifying the pinned renderer.
+Native terminals render the same styles.
 
 ## Visual qualification
 

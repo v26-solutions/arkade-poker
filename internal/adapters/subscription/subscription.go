@@ -48,7 +48,7 @@ func (o *Owner) subscribe(ctx context.Context, scripts [][]byte, open Open, time
 		return nil, err
 	}
 	live, cancel := context.WithCancelCause(ctx)
-	s := &stream{ctx: live, cancel: cancel, ready: make(chan struct{}), done: make(chan struct{}), events: make(chan ports.ScriptEvent, QueueSize)}
+	s := &stream{ctx: live, cancel: cancel, ready: make(chan struct{}), terminated: make(chan struct{}), done: make(chan struct{}), events: make(chan ports.ScriptEvent, QueueSize)}
 	o.mu.Lock()
 	if o.closed {
 		o.mu.Unlock()
@@ -68,7 +68,19 @@ func (o *Owner) subscribe(ctx context.Context, scripts [][]byte, open Open, time
 		defer close(s.done)
 		defer cancel(context.Canceled)
 		defer timer.Stop()
-		s.err = s.run(open, filter, timer)
+		r, err := open(live, filter)
+		switch {
+		case err != nil:
+			s.err = s.cause(err)
+		case r == nil:
+			s.err = errors.New("missing subscription receiver")
+		default:
+			defer r.Close()
+			s.err = s.run(r, filter, timer)
+		}
+		// Publish failure before transport cleanup can notify the server or
+		// block. Close still waits for cleanup through done.
+		close(s.terminated)
 	}()
 	select {
 	case <-s.ready:
@@ -98,24 +110,16 @@ func (o *Owner) Close() error {
 }
 
 type stream struct {
-	ctx         context.Context
-	cancel      context.CancelCauseFunc
-	ready, done chan struct{}
-	events      chan ports.ScriptEvent
-	err         error // written before done closes
-	next        sync.Mutex
-	gapSent     bool
+	ctx                     context.Context
+	cancel                  context.CancelCauseFunc
+	ready, terminated, done chan struct{}
+	events                  chan ports.ScriptEvent
+	err                     error // written before terminated closes
+	next                    sync.Mutex
+	gapSent                 bool
 }
 
-func (s *stream) run(open Open, filter []string, timer *time.Timer) error {
-	r, err := open(s.ctx, filter)
-	if err != nil {
-		return s.cause(err)
-	}
-	if r == nil {
-		return errors.New("missing subscription receiver")
-	}
-	defer r.Close()
+func (s *stream) run(r Receiver, filter []string, timer *time.Timer) error {
 	attached := false
 	for {
 		frame, err := r.Recv()
@@ -172,18 +176,18 @@ func (s *stream) Next(ctx context.Context) (ports.ScriptEvent, error) {
 		return ports.ScriptEvent{}, s.err
 	}
 	select {
-	case <-s.done:
+	case <-s.terminated:
 		return terminated()
 	default:
 	}
 	select {
 	case <-ctx.Done():
 		return ports.ScriptEvent{}, ctx.Err()
-	case <-s.done:
+	case <-s.terminated:
 		return terminated()
 	case event := <-s.events:
 		select {
-		case <-s.done:
+		case <-s.terminated:
 			return terminated()
 		default:
 			return event, nil

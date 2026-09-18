@@ -19,7 +19,12 @@ func (m *Model) dialog(f *screen) {
 		return
 	}
 	title, body, primary := "", "", ""
-	if m.modal == allInModal {
+	if m.modal == setupWarningModal {
+		title, body, primary = "ALL-IN BALANCE WARNING", m.setupWarning(), "[ENTER] CREATE ANYWAY"
+		if m.pendingSetup != nil && m.pendingSetup.Invitation != nil {
+			primary = "[ENTER] JOIN ANYWAY"
+		}
+	} else if m.modal == allInModal {
 		title, primary = "ALL IN?", "[ENTER] ALL IN"
 		if r, ok := m.raiseRange(); ok {
 			target := r.theirs + r.max
@@ -56,6 +61,9 @@ func (m *Model) dialog(f *screen) {
 			primary = "[ENTER] IMPORT WALLET"
 		case createModal:
 			primary = "[ENTER] CREATE SESSION"
+			if input, errText := m.createInput(); errText == "" {
+				body += fmt.Sprintf("\n\nDEPOSIT %s SATS PER PLAYER", formatSats(m.inputFunding(input)))
+			}
 		case joinModal:
 			primary = "[ENTER] REVIEW TERMS"
 		case joinConfirmModal:
@@ -99,11 +107,18 @@ func (m *Model) dialog(f *screen) {
 	}
 	// Keep error feedback and both controls visible, even on a small grid.
 	limit := max(1, maxH-7)
+	funding := m.fundingStatus(m.modalFunding())
+	if funding != "" {
+		limit -= 2
+	}
 	if m.errorText != "" {
 		limit -= 2
 	}
 	if len(lines) > limit {
 		lines = lines[:max(1, limit)]
+	}
+	if funding != "" {
+		lines = append(lines, "", ansi.Truncate(funding, inner, "…"))
 	}
 	if m.errorText != "" {
 		lines = append(lines, "", ansi.Truncate("ERROR / "+clean(m.errorText), inner, "…"))
@@ -125,6 +140,9 @@ func (m *Model) dialog(f *screen) {
 		}
 	}
 	cancel := "[ESC] CANCEL"
+	if m.modal == setupWarningModal {
+		cancel = "[ESC] BACK"
+	}
 	if m.modal == payoutModal || m.modal == menuModal {
 		cancel = "[ESC] CLOSE"
 	}
@@ -143,22 +161,22 @@ func (m *Model) dialog(f *screen) {
 			cancel = "[ Cancel ]"
 		}
 	}
-	buttons := []screenButton{{"cancel", cancel, !selected}}
+	buttons := []screenButton{{id: "cancel", label: cancel, selected: !selected}}
 	if primary != "" {
-		buttons = append(buttons, screenButton{"confirm", primary, selected})
+		buttons = append(buttons, screenButton{id: "confirm", label: primary, selected: selected, disabled: funding != ""})
 	} else {
 		buttons[0].selected = true
 	}
 	if m.modal == menuModal {
-		buttons = []screenButton{{"confirm", primary, true}}
+		buttons = []screenButton{{id: "confirm", label: primary, selected: true}}
 		if m.canAbortSetup() {
-			buttons = append(buttons, screenButton{"abort", "[B] ABORT SETUP", false})
+			buttons = append(buttons, screenButton{id: "abort", label: "[B] ABORT SETUP"})
 		}
 		if m.canClearGame() {
-			buttons = append(buttons, screenButton{"clear", "[X] CLEAR SAVED GAME", false})
+			buttons = append(buttons, screenButton{id: "clear", label: "[X] CLEAR SAVED GAME"})
 		}
 		if !m.host.Browser {
-			buttons = append(buttons, screenButton{"menu-exit", "[Q] LEAVE", false})
+			buttons = append(buttons, screenButton{id: "menu-exit", label: "[Q] LEAVE"})
 		}
 	}
 	f.buttons(buttons, x+2, y+h-4, w-4)

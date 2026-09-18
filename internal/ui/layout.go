@@ -99,9 +99,11 @@ func (s *screen) section(title, body string, y, h int) {
 	s.put(2, y+1, textStyle.Render(fit(body, s.w-4, h-2, true)))
 }
 
-func button(label string, w int, selected bool) string {
+func button(label string, w int, selected, disabled bool) string {
 	style := textStyle.Border(lipgloss.NormalBorder()).BorderForeground(accent).Width(w - 2).Align(lipgloss.Center)
-	if selected {
+	if disabled {
+		style = style.Foreground(lipgloss.Color(palette.Muted)).BorderForeground(lipgloss.Color(palette.Muted))
+	} else if selected {
 		// Explicit colors, never ANSI inverse: both terminal hosts must keep
 		// the selected label dark against its accent background.
 		style = style.Foreground(ink).Background(accent).Border(lipgloss.DoubleBorder()).BorderForeground(ink).BorderBackground(accent)
@@ -112,14 +114,17 @@ func button(label string, w int, selected bool) string {
 type screenButton struct {
 	id, label string
 	selected  bool
+	disabled  bool
 }
 
 func (s *screen) buttons(items []screenButton, x, y, w int) {
 	for i, item := range items {
 		start := i * (w + 1) / len(items)
 		end := (i+1)*(w+1)/len(items) - 1
-		s.put(x+start, y, button(item.label, end-start, item.selected))
-		s.region(item.id, x+start, y, end-start, 3)
+		s.put(x+start, y, button(item.label, end-start, item.selected, item.disabled))
+		if !item.disabled {
+			s.region(item.id, x+start, y, end-start, 3)
+		}
 	}
 }
 
@@ -216,10 +221,10 @@ func (m *Model) layout() *screen {
 	f.put(0, actionY, panel(legend, w, 5))
 	var items []screenButton
 	for i, a := range m.actions() {
-		items = append(items, screenButton{"action:" + a.key, "[" + strings.ToUpper(a.key) + "] " + strings.ToUpper(a.label), i == m.selected})
+		items = append(items, screenButton{id: "action:" + a.key, label: "[" + strings.ToUpper(a.key) + "] " + strings.ToUpper(a.label), selected: i == m.selected, disabled: m.fundingStatus(m.actionFunding(a)) != ""})
 	}
 	if m.key == nil && m.session == nil && !m.connecting && !m.clearing {
-		items = []screenButton{{"wallet", "[A] ADD WALLET", true}}
+		items = []screenButton{{id: "wallet", label: "[A] ADD WALLET", selected: true}}
 	}
 	if len(items) > 0 {
 		f.buttons(items, 2, actionY+1, w-4)
@@ -277,6 +282,9 @@ func (m *Model) statusSection(f *screen, y int) {
 	}
 	if m.shuffling {
 		status = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}[m.frame%10] + " shuffling..."
+	}
+	if funding := m.balanceStatus(); funding != "" {
+		status = funding
 	}
 	if m.frame < m.copyNoticeUntil {
 		status = clean(m.copyNotice) + " / " + status

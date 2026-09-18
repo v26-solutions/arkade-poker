@@ -20,6 +20,8 @@ Each player deposits a stake and bond. Bets use your wallet balance.
 Click an action, press its letter, or use arrows then Enter.
 Raise adds the entered amount above your opponent's total wager.
 All in reaches the agreed maximum wager for the hand.
+Dimmed funding actions need more funds or a confirmed wallet balance.
+Create/join warns if the deposit leaves too little for a maximum all-in call.
 At the end, [P] shows payout details and [N] starts a new game.
 
 CONTROLS & DEADLINES

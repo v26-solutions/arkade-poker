@@ -48,6 +48,7 @@ const (
 	payoutModal
 	menuModal
 	abortSetupModal
+	setupWarningModal
 )
 
 type tickMsg time.Time
@@ -103,6 +104,7 @@ type Model struct {
 	fields            []textinput.Model
 	field, selected   int
 	joinInvitation    *game.Invitation
+	pendingSetup      *game.Input
 	busy, stopped     bool
 	clearPublic       [32]byte
 	clearConfirm      bool
@@ -120,6 +122,10 @@ func New(ctx context.Context, host Host) *Model {
 	}
 	input := textinput.New()
 	input.Placeholder = "nsec, hexadecimal key or BIP39 mnemonic"
+	styles := input.Styles()
+	styles.Focused.Placeholder = textStyle
+	styles.Blurred.Placeholder = textStyle
+	input.SetStyles(styles)
 	input.EchoMode = textinput.EchoPassword
 	input.EchoCharacter = '•'
 	// Keep overlong input intact enough to reject it, rather than silently
@@ -295,10 +301,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.closed {
 			m.balanceKnown, m.balanceFailed = false, true
+			m.selectAction(0)
 			return m, nil
 		}
 		m.balance = msg.update.Sats
 		m.balanceKnown, m.balanceFailed = msg.update.Err == nil, msg.update.Err != nil
+		m.selectAction(0)
 		return m, m.waitBalance()
 	case driverMsg:
 		return m, m.driverUpdate(msg)
@@ -453,6 +461,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.modal = menuModal
 			} else if m.modal == exitModal {
 				m.modal = m.previousModal
+			} else if m.modal == setupWarningModal && m.pendingSetup != nil {
+				m.modal = createModal
+				if m.pendingSetup.Kind == game.JoinSession {
+					m.modal = joinConfirmModal
+				}
+				m.pendingSetup, m.errorText = nil, ""
 			} else {
 				m.modal = noModal
 				m.input.Reset()

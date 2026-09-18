@@ -26,6 +26,7 @@ func playing() *Model {
 	m := New(context.Background(), Host{})
 	m.session = &client.Session{Inputs: make(chan game.Input), NewGame: make(chan struct{})}
 	m.receive.Address = "tark1fixture"
+	m.balance, m.balanceKnown = 1_000_000, true
 	m.snapshot = game.Snapshot{Stage: game.StageBettingLocal, Role: covenant.Player2,
 		Terms:  game.Terms{Stake: 1000, Bond: 1000, MinBet: 100, MaxWager: 2000},
 		State:  &covenant.State{Phase: covenant.Phase{Kind: covenant.Betting, Actor: covenant.Player2, Street: covenant.Flop}, Wagers: covenant.PerPlayer[uint64]{Player1: 600, Player2: 400}},
@@ -140,6 +141,7 @@ func TestCreateFormDefaultsAndOverrides(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			m := New(context.Background(), test.host)
 			m.session = &client.Session{Inputs: make(chan game.Input)}
+			m.balance, m.balanceKnown = 1_000_000, true
 			m.snapshot = game.Snapshot{Stage: game.StageInit, Choice: &game.Choice{Allowed: []game.InputKind{game.StartSession}}}
 			press(m, 'c', 0)
 			if m.modal != createModal {
@@ -199,6 +201,11 @@ func TestExitVisibleBelowMinimumGrid(t *testing.T) {
 
 func invitation(t *testing.T, relay string) game.Invitation {
 	t.Helper()
+	return invitationWithTerms(t, relay, game.Terms{Stake: 1000, Bond: 1000, MinBet: 100, MaxWager: 1000})
+}
+
+func invitationWithTerms(t *testing.T, relay string, terms game.Terms) game.Invitation {
+	t.Helper()
 	key, err := wallet.ParseKey(fmt.Sprintf("%064x", 40), "")
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +226,7 @@ func invitation(t *testing.T, relay string) game.Invitation {
 	}
 	cfg := game.Config{ArkdURL: "http://ark.invalid", EmulatorURL: "http://emulator.invalid", IndexerURL: "http://index.invalid",
 		Wallet: wallet.Config{Network: "regtest", WalletPublicKey: key.PublicKey(), ArkSigningKey: [32]byte(schnorr.SerializePubKey(server.PubKey())), EmulatorSigningKey: [32]byte(schnorr.SerializePubKey(emulator.PubKey())), CheckpointScript: cp, Receive: receive, OutputPolicy: wallet.OutputPolicy{MinAmount: 330, MaxAmount: 21_000_000 * 100_000_000}}}
-	inv, secret, err := game.CreateInvitation(context.Background(), nil, cfg, game.Terms{Stake: 1000, Bond: 1000, MinBet: 100, MaxWager: 1000}, relay)
+	inv, secret, err := game.CreateInvitation(context.Background(), nil, cfg, terms, relay)
 	if err != nil {
 		t.Fatal(err)
 	}

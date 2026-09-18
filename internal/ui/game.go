@@ -83,9 +83,7 @@ func (m *Model) driverUpdate(msg driverMsg) tea.Cmd {
 	if m.stopped {
 		m.status = "Game stopped. Saved work retained; restart to reconcile."
 	}
-	if m.selected >= len(m.actions()) {
-		m.selected = 0
-	}
+	m.selectAction(0)
 	return m.waitUpdate()
 }
 
@@ -153,6 +151,28 @@ func (m *Model) actions() []action {
 	return append(a, setupActions...)
 }
 
+// Disabled actions remain visible, but never receive keyboard selection.
+// A zero step preserves the current selection if it is still available.
+func (m *Model) selectAction(step int) {
+	actions := m.actions()
+	start := m.selected
+	if start < 0 || start >= len(actions) {
+		start = 0
+	}
+	start += step
+	if step == 0 {
+		step = 1
+	}
+	m.selected = -1
+	for i := 0; i < len(actions); i++ {
+		index := ((start+i*step)%len(actions) + len(actions)) % len(actions)
+		if m.fundingStatus(m.actionFunding(actions[index])) == "" {
+			m.selected = index
+			return
+		}
+	}
+}
+
 func (m *Model) submit(input game.Input, fresh bool) tea.Cmd {
 	if m.session == nil || m.busy || m.stopped {
 		return nil
@@ -161,6 +181,18 @@ func (m *Model) submit(input game.Input, fresh bool) tea.Cmd {
 		if err := m.session.ValidateSetup(input); err != nil {
 			m.errorText = "The invitation, relay or terms do not match this wallet's service configuration."
 			return nil
+		}
+	}
+	if !fresh {
+		if m.fundingStatus(m.inputFunding(input)) != "" {
+			return nil
+		}
+		if terms, ok := setupTerms(input); ok && m.balance < terms.Stake+terms.Bond+terms.MaxWager {
+			if m.modal != setupWarningModal || m.pendingSetup == nil || !reflect.DeepEqual(*m.pendingSetup, input) {
+				m.pendingSetup = &input
+				m.modal, m.errorText = setupWarningModal, ""
+				return nil
+			}
 		}
 	}
 	m.busy, m.errorText = true, ""
@@ -195,7 +227,7 @@ func (m *Model) clearForm() {
 		m.fields[i].Reset()
 		m.fields[i].Blur()
 	}
-	m.fields, m.joinInvitation = nil, nil
+	m.fields, m.joinInvitation, m.pendingSetup = nil, nil, nil
 	m.field = 0
 }
 func (m *Model) openForm(kind modal, values ...string) tea.Cmd {
@@ -218,6 +250,12 @@ func (m *Model) openForm(kind modal, values ...string) tea.Cmd {
 }
 
 func (m *Model) gameKey(key string) (tea.Cmd, bool) {
+	if m.modal == setupWarningModal {
+		if key == "enter" && m.pendingSetup != nil {
+			return m.submit(*m.pendingSetup, false), true
+		}
+		return nil, true
+	}
 	if m.modal == menuModal {
 		switch key {
 		case "enter", "r":
@@ -286,22 +324,26 @@ func (m *Model) gameKey(key string) (tea.Cmd, bool) {
 	if len(a) == 0 {
 		return nil, false
 	}
-	if m.selected >= len(a) {
-		m.selected = 0
-	}
+	m.selectAction(0)
 	switch key {
 	case "left", "up", "shift+tab":
-		m.selected = (m.selected + len(a) - 1) % len(a)
+		m.selectAction(-1)
 		return nil, true
 	case "right", "down", "tab":
-		m.selected = (m.selected + 1) % len(a)
+		m.selectAction(1)
 		return nil, true
 	case "enter":
+		if m.selected < 0 {
+			return nil, true
+		}
 		key = a[m.selected].key
 	}
 	for i, action := range a {
 		if key != action.key {
 			continue
+		}
+		if m.fundingStatus(m.actionFunding(action)) != "" {
+			return nil, true
 		}
 		m.selected = i
 		if key == "a" {
@@ -355,29 +397,38 @@ func amount(text string) (int64, error) {
 	}
 	return n, nil
 }
+func (m *Model) createInput() (game.Input, string) {
+	if len(m.fields) != 5 {
+		return game.Input{}, "Session form unavailable."
+	}
+	var v [4]int64
+	for i := range v {
+		n, err := amount(m.fields[i].Value())
+		if err != nil {
+			return game.Input{}, "Enter positive whole satoshi amounts."
+		}
+		v[i] = n
+	}
+	terms := game.Terms{Stake: v[0], Bond: v[1], MinBet: v[2], MaxWager: v[3]}
+	if err := terms.Validate(); err != nil {
+		return game.Input{}, "Check minimum bet, maximum wager and total amounts."
+	}
+	relay := m.fields[4].Value()
+	if !strings.HasPrefix(relay, "ws://") && !strings.HasPrefix(relay, "wss://") {
+		return game.Input{}, "Relay must begin with ws:// or wss://."
+	}
+	return game.Input{Kind: game.StartSession, Terms: terms, RelayURL: relay}, ""
+}
+
 func (m *Model) submitForm() tea.Cmd {
 	switch m.modal {
 	case createModal:
-		var v [4]int64
-		for i := range v {
-			n, err := amount(m.fields[i].Value())
-			if err != nil {
-				m.errorText = "Enter positive whole satoshi amounts."
-				return nil
-			}
-			v[i] = n
-		}
-		terms := game.Terms{Stake: v[0], Bond: v[1], MinBet: v[2], MaxWager: v[3]}
-		if err := terms.Validate(); err != nil {
-			m.errorText = "Check minimum bet, maximum wager and total amounts."
+		input, errText := m.createInput()
+		m.errorText = errText
+		if errText != "" {
 			return nil
 		}
-		relay := m.fields[4].Value()
-		if !strings.HasPrefix(relay, "ws://") && !strings.HasPrefix(relay, "wss://") {
-			m.errorText = "Relay must begin with ws:// or wss://."
-			return nil
-		}
-		return m.submit(game.Input{Kind: game.StartSession, Terms: terms, RelayURL: relay}, false)
+		return m.submit(input, false)
 	case joinModal:
 		inv, err := game.DecodeInvitation(strings.TrimSpace(m.fields[0].Value()))
 		if err != nil {

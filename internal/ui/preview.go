@@ -23,6 +23,8 @@ type Preview struct {
 	scene, w, h int
 }
 
+const previewScenes = 23
+
 func NewPreview() *Preview {
 	p := &Preview{scene: 8, w: 120, h: 44}
 	p.load()
@@ -41,12 +43,12 @@ func (p *Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p, nil
 		}
 		if msg.String() == "f2" {
-			p.scene = (p.scene + 1) % 19
+			p.scene = (p.scene + 1) % previewScenes
 			p.load()
 			return p, nil
 		}
 		if msg.String() == "f1" {
-			p.scene = (p.scene + 18) % 19
+			p.scene = (p.scene + previewScenes - 1) % previewScenes
 			p.load()
 			return p, nil
 		}
@@ -56,7 +58,7 @@ func (p *Preview) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.PasteMsg:
 		if strings.HasPrefix(msg.Content, "preview:") {
 			i, err := strconv.Atoi(strings.TrimPrefix(msg.Content, "preview:"))
-			if err == nil && i >= 0 && i < 19 {
+			if err == nil && i >= 0 && i < previewScenes {
 				p.scene = i
 				p.load()
 			}
@@ -166,7 +168,14 @@ func (p *Preview) load() {
 		m.snapshot.Choice = nil
 		m.shuffling = true
 		m.status = "Preparing the encrypted deck"
-	case 18:
+	case 19:
+		m.balance = 250
+	case 20:
+		m.snapshot = game.Snapshot{Choice: &game.Choice{Allowed: []game.InputKind{game.StartSession, game.JoinSession}}}
+		m.balance = 25000
+		m.gameKey("c")
+		m.submitForm()
+	case 18, 21, 22:
 		// Public codec fixture; no wallet or live session is involved.
 		inv, err := game.DecodeInvitation("arkpg1:iCeIJ_QDoI0GAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh95vmZ--dy7rFWgYpXOhwsHApv82y3OKNlZ8oFbFvgXmCAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4_DXdzczovL25vcy5sb2w4Wfq0YppFfA")
 		if err != nil {
@@ -176,6 +185,16 @@ func (p *Preview) load() {
 		m.clearPublic = [32]byte{1}
 		m.host.AbortSetup = func(context.Context, [32]byte) (*client.Session, error) { return nil, nil }
 		m.status = m.gameStatus()
+		if p.scene != 18 {
+			m.snapshot = game.Snapshot{Choice: &game.Choice{Allowed: []game.InputKind{game.JoinSession}}}
+			m.modal, m.joinInvitation = joinConfirmModal, &inv
+			m.balance = inv.Terms.Stake + inv.Terms.Bond
+			if p.scene == 21 {
+				m.balance /= 2
+			} else {
+				m.submit(game.Input{Kind: game.JoinSession, Invitation: &inv}, false)
+			}
+		}
 	}
 	p.inner = m
 }

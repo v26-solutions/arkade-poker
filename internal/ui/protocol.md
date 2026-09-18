@@ -125,8 +125,30 @@ Before the first query the header shows `... sats`; a failed query or interrupte
 subscription shows `Balance unavailable` until a successful refresh arrives.
 Only the address's visible cells copy it; clicking the balance does nothing.
 
+Funding actions remain visible but dimmed and cannot be activated by keyboard
+or mouse until a known balance covers their additional wallet contribution.
+Arrow/Tab navigation skips disabled actions, and their shortcuts leave selection
+unchanged. The table's funding status keeps the cheapest blocked action's shortfall
+visible as selection moves; balance and driver updates clear disabled selections.
+Create and Deposit & Join require stake plus bond before authorizing automatic
+setup funding. Call uses the call amount; Raise uses the minimum additional
+contribution to open the form and the entered contribution to submit; All in
+uses the maximum wager minus the local player's existing wagers. The status
+and open dialog show the shortfall or explain that balance discovery is pending
+or unavailable. Live balance updates immediately recompute availability, and
+submission checks it again. Free actions remain available with no balance.
+
+When the deposit is affordable but stake + bond + maximum wager is not, create
+and join open an ALL-IN BALANCE WARNING before sending any driver input. It
+shows the available balance, deposit, maximum wager, total needed and shortfall;
+the user must explicitly choose Create/Join Anyway. Back preserves the create
+form or invitation review. The warning uses live balances and its confirmation
+also requires an affordable deposit. These UI checks do not reserve coins or
+replace wallet funding selection and authentication at transaction time.
+
 Wallet entry accepts nsec, raw hexadecimal keys and English BIP39 mnemonics. It is
-password-redacted and cleared on import/cancellation. Mnemonics use the network
+password-redacted and cleared on import/cancellation. Its placeholder uses the
+palette's light text on the green background. Mnemonics use the network
 reported by startup Arkd discovery. If it is still missing or unavailable, Enter
 retries discovery and keeps the redacted input for the next import attempt.
 Native environment mnemonic import queries Arkd with a 30-second timeout before

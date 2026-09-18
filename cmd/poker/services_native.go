@@ -26,7 +26,7 @@ func discoverNetwork(ctx context.Context, endpoint string) (string, error) {
 	return info.Network, nil
 }
 
-func connectServices(ctx context.Context, cfg game.Config) (client.Connections, error) {
+func connectServices(ctx context.Context, cfg game.Config, emulatorPCR0 string) (client.Connections, error) {
 	if err := ctx.Err(); err != nil {
 		return client.Connections{}, err
 	}
@@ -34,7 +34,7 @@ func connectServices(ctx context.Context, cfg game.Config) (client.Connections, 
 	if err != nil {
 		return client.Connections{}, err
 	}
-	emu, err := adapter.NewEmulator(cfg.EmulatorURL)
+	emu, err := adapter.NewEmulator(ctx, cfg.EmulatorURL, emulatorPCR0)
 	if err != nil {
 		_ = ark.Close()
 		return client.Connections{}, err

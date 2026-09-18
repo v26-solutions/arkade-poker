@@ -27,6 +27,9 @@ type Host struct {
 	ConnectSession  func(context.Context, *wallet.Key) (*client.Session, error)
 	ClearSavedGame  func(context.Context, [32]byte) (*client.Session, error)
 	AbortSetup      func(context.Context, [32]byte) (*client.Session, error)
+	ArkdURL         string
+	EmulatorURL     string
+	DelegatorURL    string
 	RelayURL        string
 	DefaultTerms    game.Terms
 	CopyText        func(string) error

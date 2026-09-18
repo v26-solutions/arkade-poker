@@ -8,6 +8,7 @@ declare const POKER_PALETTE: { accent: string; muted: string; background: string
 interface PokerConfig {
   arkd: string;
   emulator: string;
+  emulatorPCR0: string;
   delegator: string;
   indexer: string;
   relay: string;

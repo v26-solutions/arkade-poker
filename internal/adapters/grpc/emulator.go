@@ -8,6 +8,7 @@ import (
 
 	"arkade-poker/go/internal/adapters/servicedata"
 	"arkade-poker/go/internal/ports"
+	enclave "github.com/ArkLabsHQ/enclave/client"
 	client "github.com/arkade-os/emulator/pkg/client"
 	gogrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -19,7 +20,34 @@ type Emulator struct {
 	conn   *gogrpc.ClientConn
 }
 
-func NewEmulator(endpoint string) (*Emulator, error) {
+// NewEmulator verifies Nitro attestation before opening a gRPC connection pinned
+// to the enclave's attested TLS key. No RPC is sent if verification fails.
+func NewEmulator(ctx context.Context, endpoint, expectedPCR0 string) (*Emulator, error) {
+	u, err := ports.Endpoint(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if u.Path != "" && u.Path != "/" {
+		return nil, errors.New("gRPC endpoint must not have a path")
+	}
+	if u.Scheme != "https" {
+		return nil, errors.New("attested emulator requires an https:// endpoint")
+	}
+	c, err := enclave.New(u.String(), enclave.Options{ExpectedPCR0: expectedPCR0})
+	if err != nil {
+		return nil, err
+	}
+	conn, err := c.GRPCConn(ctx,
+		gogrpc.WithDefaultCallOptions(gogrpc.MaxCallRecvMsgSize(20<<20)))
+	if err != nil {
+		return nil, err
+	}
+	return &Emulator{client.NewGRPCClient(conn), conn}, nil
+}
+
+// NewUnverifiedEmulator is for transport fixtures and the local regtest harness.
+// Application hosts must use NewEmulator.
+func NewUnverifiedEmulator(endpoint string) (*Emulator, error) {
 	u, err := ports.Endpoint(endpoint)
 	if err != nil {
 		return nil, err

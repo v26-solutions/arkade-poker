@@ -53,7 +53,7 @@ func TestBrowserTransport(t *testing.T) {
 			t.Fatal(info, err)
 		}
 		t.Log("Arkd", info.Version)
-		e, _ := NewEmulator("http://localhost:7073")
+		e, _ := NewUnverifiedEmulator("http://localhost:7073")
 		defer e.Close()
 		emu, err := e.Info(ctx)
 		if err != nil || emu.Signer == "" {

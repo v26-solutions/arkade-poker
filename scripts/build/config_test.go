@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"maps"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"arkade-poker/go/internal/appconfig"
@@ -16,6 +17,7 @@ func TestWebConfig(t *testing.T) {
 	// Native settings must not leak into the web artifact.
 	t.Setenv("POKER_NETWORK", "bitcoin")
 	t.Setenv("POKER_STAKE", "90000")
+	t.Setenv("POKER_EMULATOR_PCR0", strings.Repeat("cd", 48))
 	want, _ := appconfig.Defaults().Resolve()
 	c, err := webConfig(nil)
 	if err != nil || c != want {
@@ -24,10 +26,12 @@ func TestWebConfig(t *testing.T) {
 	c, err = webConfig([]string{"--arkd-url", "http://localhost:7070",
 		"--emulator-url", "http://localhost:7073", "--relay-url", "ws://localhost:7777",
 		"--delegator-url", "http://localhost:7012",
+		"--emulator-pcr0", strings.Repeat("ab", 48),
 		"--stake", "10000", "--bond", "20000", "--min-bet", "1000", "--max-wager", "50000"})
 	want = appconfig.Config{ArkdURL: "http://localhost:7070", IndexerURL: "http://localhost:7070",
 		EmulatorURL: "http://localhost:7073", RelayURL: "ws://localhost:7777",
 		DelegatorURL: "http://localhost:7012",
+		EmulatorPCR0: strings.Repeat("ab", 48),
 		Terms:        game.Terms{Stake: 10000, Bond: 20000, MinBet: 1000, MaxWager: 50000}}
 	if err != nil || c != want {
 		t.Fatalf("web flags: %+v, %v", c, err)
@@ -49,6 +53,7 @@ func TestEmbeddedWebConfig(t *testing.T) {
 		t.Skip("Node is needed to execute the embedded configuration")
 	}
 	c, err := webConfig([]string{"--stake=7000", "--bond=8000", "--min-bet=600", "--max-wager=120000",
+		"--emulator-pcr0=" + strings.Repeat("ef", 48),
 		"--relay-url=wss://relay.example/path?label=\"quoted\"&line=\\n"})
 	if err != nil {
 		t.Fatal(err)

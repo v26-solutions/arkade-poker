@@ -51,7 +51,19 @@ func (m *Model) toggleHelp() tea.Cmd {
 func (m *Model) helpWidth() int { return max(1, min(82, m.width-4)) }
 
 func (m *Model) helpLines() []string {
-	return strings.Split(ansi.Wrap(helpInstructions, max(1, m.helpWidth()-6), " "), "\n")
+	text := helpInstructions + "\n\nSERVICES"
+	for _, service := range []struct{ name, url string }{
+		{"Arkd", m.host.ArkdURL},
+		{"Emulator", m.host.EmulatorURL},
+		{"Delegator", m.host.DelegatorURL},
+	} {
+		url := service.url
+		if url == "" {
+			url = "Not configured"
+		}
+		text += "\n" + service.name + ": " + url
+	}
+	return strings.Split(ansi.Wrap(text, max(1, m.helpWidth()-6), " "), "\n")
 }
 
 func (m *Model) helpPageSize() int {

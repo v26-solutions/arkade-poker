@@ -163,6 +163,8 @@ dialogs and the small-window fallback. `?` toggles Help without resetting the
 underlying form, confirmation or error. Its concise setup/play/recovery guide
 scrolls with arrows, Page Up/Down, Home/End, the mouse wheel or clickable scroll
 controls. `[L] Copy Logs` and its feedback stay above the scrolling instructions.
+The Services section shows the Arkd, emulator and delegator URLs from the host's
+resolved startup settings, including native environment and web build overrides.
 Escape/Enter closes Help. Help consumes covered form input and game actions;
 driver updates and deadline handling continue, including stale-bet invalidation.
 L/l copies the current diagnostic snapshot on both hosts, including busy/stopped

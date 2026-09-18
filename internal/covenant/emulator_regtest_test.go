@@ -45,12 +45,12 @@ func TestRegtestEmulatorSigningAdapters(t *testing.T) {
 	if err != nil || info.Network != "regtest" {
 		t.Fatal("regtest discovery", err)
 	}
-	n, err := native.NewEmulator(endpoint("POKER_EMULATOR_URL", "http://localhost:7073"))
+	n, err := native.NewUnverifiedEmulator(endpoint("POKER_EMULATOR_URL", "http://localhost:7073"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer n.Close()
-	w, err := web.NewEmulator(endpoint("POKER_EMULATOR_URL", "http://localhost:7073"))
+	w, err := web.NewUnverifiedEmulator(endpoint("POKER_EMULATOR_URL", "http://localhost:7073"))
 	if err != nil {
 		t.Fatal(err)
 	}

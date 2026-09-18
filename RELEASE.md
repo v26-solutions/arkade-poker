@@ -77,7 +77,8 @@ the resolved public configuration in the browser bundle.
 | Setting | Default | Native environment variable | Web build flag |
 | --- | --- | --- | --- |
 | Arkd | `https://mutinynet.arkade.sh` | `POKER_ARKD_URL` | `--arkd-url` |
-| Emulator | `https://emulator.mutinynet.arkade.sh` | `POKER_EMULATOR_URL` | `--emulator-url` |
+| Emulator | `https://emulator.mutinynet.enclave-dev.arkade.sh` | `POKER_EMULATOR_URL` | `--emulator-url` |
+| Emulator PCR0 | `eb1be1bb0da69abf0f53d207a4a7c66642b4aa7a5140676c22700cfb491450194eb105a8ebc9bd94bfc14ba45e5bc793` | `POKER_EMULATOR_PCR0` | `--emulator-pcr0` |
 | Delegator | `https://delegator.mutinynet.arkade.sh` | `POKER_DELEGATOR_URL` | `--delegator-url` |
 | Indexer | Resolved Arkd URL | `POKER_INDEXER_URL` | `--indexer-url` |
 | Nostr relay | `wss://nos.lol` | `POKER_RELAY_URL` | `--relay-url` |
@@ -93,6 +94,18 @@ selected Arkd URL unless separately supplied. Arkd's `NetworkFromString` resolve
 the network name reported by the server, including its Bitcoin fallback for
 unknown names. There is no network environment variable or build flag.
 The status bar shows the session's network at the bottom right as `mutinynet ●`.
+
+Emulator connections use `github.com/ArkLabsHQ/enclave/client`: native uses its
+attested gRPC connection, and the browser uses its verified HTTPS requests.
+The enclave client owns PCR0, signature, nonce and TLS-key verification. Supply
+the trusted build's PCR0 when changing emulator deployments. The PCR0 comes from
+current startup settings, including when reopening a saved wallet.
+
+Browser Fetch does not expose the TLS peer certificate for the client's key pin.
+The web app verifies the signed Nitro document and PCR0, but relies on browser
+CA/hostname validation for the HTTPS connection; it cannot bind that connection
+to the attested TLS key. The endpoint must have a browser-trusted certificate
+and allow CORS for `/enclave/attestation`, `/v1/info` and `/v1/tx`.
 
 Amounts are positive decimal whole satoshis without commas. The minimum bet must
 not exceed the maximum wager, and twice the sum of stake, bond and maximum wager
@@ -120,19 +133,24 @@ go run ./scripts/build web --help
 `WEB_FLAGS` configures the web artifact built by `web`, `serve`, `all` and
 `release`. Native release binaries read their settings when launched.
 
-For the local regtest stack:
+To use local regtest services with an attested emulator, set its HTTPS endpoint
+and trusted PCR0 alongside the local service URLs:
 
 ```sh
 POKER_ARKD_URL=http://localhost:7070 \
-POKER_EMULATOR_URL=http://localhost:7073 \
+POKER_EMULATOR_URL=https://your-regtest-enclave.example \
+POKER_EMULATOR_PCR0=your-trusted-regtest-pcr0 \
 POKER_DELEGATOR_URL=http://localhost:7012 \
 POKER_RELAY_URL=ws://localhost:7777 \
 ./build/poker
 
-make serve WEB_FLAGS='--arkd-url http://localhost:7070 --emulator-url http://localhost:7073 --delegator-url http://localhost:7012 --relay-url ws://localhost:7777'
+make serve WEB_FLAGS='--arkd-url http://localhost:7070 --emulator-url https://your-regtest-enclave.example --emulator-pcr0 your-trusted-regtest-pcr0 --delegator-url http://localhost:7012 --relay-url ws://localhost:7777'
 ```
 
-The local stack needs its `delegate` profile enabled for these examples.
+The local stack needs its `delegate` profile enabled for these examples. Its
+plain emulator on port 7073 has no Nitro attestation and cannot be used by the
+application hosts. Transport fixtures and the explicit regtest harness retain
+unverified adapters for that local emulator.
 
 Native `POKER_DATA_DIR` selects the session storage directory and
 `POKER_WALLET_KEY` imports a wallet key at startup. The default storage directory
@@ -168,6 +186,7 @@ wallet private key remain in memory only.
 
 Arkd/emulator use versioned replacements in `go.mod` and checksums in `go.sum`.
 Go downloads them into its module cache; sibling checkouts are unnecessary.
+The enclave client is pinned to `dc4b91624d2d` in the same manifests.
 
 The booba frontend, Ghostty renderer and renderer WASM all come from the same
 unmodified Go module selected by `go.mod`. Go's WASM runtime comes from the

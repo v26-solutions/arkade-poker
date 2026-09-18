@@ -21,7 +21,7 @@ func TestMutinynetConfigRoundTrip(t *testing.T) {
 	c := testConfig(1)
 	c.Wallet.Network = "mutinynet"
 	c.ArkdURL, c.IndexerURL = "https://mutinynet.arkade.sh", "https://mutinynet.arkade.sh"
-	c.EmulatorURL = "https://emulator.mutinynet.arkade.sh"
+	c.EmulatorURL = "https://emulator.mutinynet.enclave-dev.arkade.sh"
 	c.DelegatorURL = "https://delegator.mutinynet.arkade.sh"
 	encoded, err := encodeConfig(c)
 	if err != nil {

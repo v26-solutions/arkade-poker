@@ -17,6 +17,7 @@ func webConfig(args []string) (appconfig.Config, error) {
 	flags := flag.NewFlagSet("web", flag.ContinueOnError)
 	flags.StringVar(&c.ArkdURL, "arkd-url", c.ArkdURL, "Arkd endpoint")
 	flags.StringVar(&c.EmulatorURL, "emulator-url", c.EmulatorURL, "Emulator endpoint")
+	flags.StringVar(&c.EmulatorPCR0, "emulator-pcr0", c.EmulatorPCR0, "Expected emulator enclave PCR0 (96 hex characters)")
 	flags.StringVar(&c.DelegatorURL, "delegator-url", c.DelegatorURL, "Delegator endpoint")
 	flags.StringVar(&c.IndexerURL, "indexer-url", c.IndexerURL, "Indexer endpoint (defaults to Arkd)")
 	flags.StringVar(&c.RelayURL, "relay-url", c.RelayURL, "Nostr relay")

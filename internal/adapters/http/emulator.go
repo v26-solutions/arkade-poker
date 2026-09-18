@@ -1,14 +1,58 @@
 package http
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"strings"
+
 	"arkade-poker/go/internal/adapters/servicedata"
 	"arkade-poker/go/internal/ports"
-	"context"
+	enclave "github.com/ArkLabsHQ/enclave/client"
 )
 
 type Emulator struct{ *Client }
 
-func NewEmulator(endpoint string) (*Emulator, error) {
+// NewEmulator delegates HTTPS attestation verification to the enclave client.
+// Browsers verify the document but rely on browser HTTPS validation: Fetch does
+// not expose the peer certificate for the enclave client's TLS key pinning.
+func NewEmulator(endpoint, expectedPCR0 string) (*Emulator, error) {
+	c, err := New(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(c.base, "https://") {
+		return nil, errors.New("attested emulator requires an https:// endpoint")
+	}
+	verified, err := enclave.New(c.base, enclave.Options{ExpectedPCR0: expectedPCR0})
+	if err != nil {
+		return nil, err
+	}
+	c.client.Transport = attestedTransport{verified}
+	return &Emulator{c}, nil
+}
+
+type attestedTransport struct{ client *enclave.Client }
+
+func (t attestedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	response, err := t.client.Do(req.Context(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Response{
+		StatusCode:    response.StatusCode,
+		Header:        response.Header,
+		Body:          io.NopCloser(bytes.NewReader(response.Body)),
+		ContentLength: int64(len(response.Body)),
+		Request:       req,
+	}, nil
+}
+
+// NewUnverifiedEmulator is for transport fixtures and the local regtest harness.
+// Application hosts must use NewEmulator.
+func NewUnverifiedEmulator(endpoint string) (*Emulator, error) {
 	c, err := New(endpoint)
 	if err != nil {
 		return nil, err

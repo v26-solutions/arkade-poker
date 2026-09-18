@@ -13,6 +13,7 @@ import (
 type Config struct {
 	ArkdURL      string     `json:"arkd"`
 	EmulatorURL  string     `json:"emulator"`
+	EmulatorPCR0 string     `json:"emulatorPCR0"`
 	DelegatorURL string     `json:"delegator"`
 	IndexerURL   string     `json:"indexer"`
 	RelayURL     string     `json:"relay"`
@@ -22,7 +23,8 @@ type Config struct {
 func Defaults() Config {
 	return Config{
 		ArkdURL:      "https://mutinynet.arkade.sh",
-		EmulatorURL:  "https://emulator.mutinynet.arkade.sh",
+		EmulatorURL:  "https://emulator.mutinynet.enclave-dev.arkade.sh",
+		EmulatorPCR0: "eb1be1bb0da69abf0f53d207a4a7c66642b4aa7a5140676c22700cfb491450194eb105a8ebc9bd94bfc14ba45e5bc793",
 		DelegatorURL: "https://delegator.mutinynet.arkade.sh",
 		RelayURL:     "wss://nos.lol",
 		Terms:        game.Terms{Stake: 5000, Bond: 5000, MinBet: 500, MaxWager: 100000},
@@ -62,6 +64,7 @@ func FromEnv(getenv func(string) string) (Config, error) {
 	}{
 		{"POKER_ARKD_URL", &c.ArkdURL},
 		{"POKER_EMULATOR_URL", &c.EmulatorURL},
+		{"POKER_EMULATOR_PCR0", &c.EmulatorPCR0},
 		{"POKER_DELEGATOR_URL", &c.DelegatorURL},
 		{"POKER_INDEXER_URL", &c.IndexerURL},
 		{"POKER_RELAY_URL", &c.RelayURL},

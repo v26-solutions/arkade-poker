@@ -115,7 +115,7 @@ func newPlayer(t *testing.T, ctx context.Context, directory string, i int, repor
 		report.Players[i].Adapter = "native gRPC"
 		ark, err = native.NewArkd(arkURL)
 		require(t, err)
-		emu, err = native.NewEmulator(emuURL)
+		emu, err = native.NewUnverifiedEmulator(emuURL)
 		require(t, err)
 		index, e := native.NewIndexer(indexURL)
 		require(t, e)
@@ -124,7 +124,7 @@ func newPlayer(t *testing.T, ctx context.Context, directory string, i int, repor
 		report.Players[i].Adapter = "HTTP/SSE on native Go (not WASM)"
 		ark, err = gateway.NewArkd(arkURL)
 		require(t, err)
-		emu, err = gateway.NewEmulator(emuURL)
+		emu, err = gateway.NewUnverifiedEmulator(emuURL)
 		require(t, err)
 		index, e := gateway.NewIndexer(indexURL)
 		require(t, e)

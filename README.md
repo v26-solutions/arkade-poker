@@ -59,6 +59,7 @@ Click **[?] Help** at the far left of the status bar, or press **?**, for a quic
 guide to setup, play and recovery. Scroll with the arrow keys, Page Up/Down or
 mouse wheel; **Esc** returns to your table or form without losing input.
 **[L] Copy Logs** stays at the top of Help, with copy success or failure below it.
+The Services section lists the Arkd, emulator and delegator URLs used by the app.
 
 Press **L** (or **l**) to copy diagnostic logs in either the terminal or browser.
 The shortcut works during waits and in confirmation dialogs; text fields keep

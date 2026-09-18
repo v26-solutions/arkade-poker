@@ -31,7 +31,7 @@
                 ./internal
               ];
             };
-            vendorHash = "sha256-XLrCHyDRDHwrM41oKP+V4eIBASwDuXfB0FLFRQt5qx4=";
+            vendorHash = "sha256-mBNOewljxhcg/kAORaMUu1BQlqQjB4BJD8NEcylyHMU=";
             subPackages = [ "cmd/poker" ];
             env.CGO_ENABLED = "0";
             tags = [ "purego" ];

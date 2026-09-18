@@ -47,6 +47,20 @@ bounded at 20 MiB, checkpoint lists at 256, and transaction identity strings at
 128 bytes. These are transport bounds, not PSBT or signature admission. HTTP
 accepts both protobuf field-name spellings and rejects duplicate aliases.
 
+Application emulator adapters use `github.com/ArkLabsHQ/enclave/client`, with
+`ExpectedPCR0` supplied by startup configuration. Native calls `GRPCConn` before
+creating the emulator RPC client; HTTP calls `Do` through a response-type adapter.
+The enclave client owns attestation validation, caching and TLS pinning; neither
+host enables its insecure options. Attestation failure prevents emulator discovery
+and signing. `NewUnverifiedEmulator` is reserved for fixtures and local regtest.
+
+The upstream HTTP client buffers responses before returning them, so the 20 MiB
+response check applies after that buffer is allocated for attested emulator calls.
+Its HTTP redirect and response-body handling also remain upstream-owned.
+Browser Fetch verifies HTTPS using the browser's CA/hostname checks and does not
+expose the TLS certificate for pinning. Browser attestation/PCR0 verification
+therefore cannot authenticate the HTTPS connection's key as native gRPC does.
+
 Delegator discovery uses the shared HTTP adapter on native and WASM builds:
 `GET /v1/delegator/info` reads `pubkey`. It inherits the bounded JSON response,
 redirect refusal and cancellation behavior. Wallet admission validates the

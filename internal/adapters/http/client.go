@@ -1,5 +1,5 @@
 // Package http implements bounded gateway requests using Fetch on js/wasm.
-// Gateway DTOs stay here; generated native RPC packages are deliberately absent.
+// Gateway DTOs stay here; emulator attestation uses the upstream enclave client.
 package http
 
 import (

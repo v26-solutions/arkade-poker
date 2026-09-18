@@ -104,14 +104,14 @@ func TestServiceGeneratedGatewayParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer na.Close()
-	ne, err := NewEmulator("http://" + listener.Addr().String())
+	ne, err := NewUnverifiedEmulator("http://" + listener.Addr().String())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer ne.Close()
 	wa, _ := web.NewArkd(ah.URL)
 	defer wa.Close()
-	we, _ := web.NewEmulator(eh.URL)
+	we, _ := web.NewUnverifiedEmulator(eh.URL)
 	defer we.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
